@@ -1,0 +1,48 @@
+name: Windows Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*' # 当推送形如 v1.0, v2.1 的 tag 时触发构建
+  workflow_dispatch: # 允许在 GitHub 网页端手动触发
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build Project
+      run: cmake --build build --config Release
+
+    - name: Prepare Release Artifacts
+      run: |
+        mkdir Huhb3D_Release
+        # 复制主程序
+        copy build\src\render\Release\test_render.exe Huhb3D_Release\
+        # 如果需要复制测试模型，可以取消下面这行的注释
+        # copy test_models\*.stl Huhb3D_Release\
+        
+    - name: Create ZIP Archive
+      run: Compress-Archive -Path Huhb3D_Release\* -DestinationPath Huhb3D_Viewer_Windows.zip
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: Huhb3D_Viewer_Windows.zip
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Artifact (For manual runs)
+      if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: Huhb3D_Viewer_Windows
+        path: Huhb3D_Viewer_Windows.zip

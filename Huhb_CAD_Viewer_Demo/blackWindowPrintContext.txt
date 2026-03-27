@@ -1,0 +1,1888 @@
+Starting STL renderer test...
+Current working directory: D:\Huhb\AIProject\Huhb-Utopia-Project\OpenGL-Core-HuhbPro\Huhb_CAD_Viewer_Demo
+Parsing STL file...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF337B0000
+Block allocated successfully
+Using STL file path: Dji+Avata+2+Simple.stl
+Starting to parse STL file: Dji+Avata+2+Simple.stl
+Checking if file exists: Dji+Avata+2+Simple.stl
+File exists: yes
+Checking if file is binary: Dji+Avata+2+Simple.stl
+File size: 23030084 bytes
+File header read successfully
+Triangle count: 460600
+Is binary: yes
+Parsing binary STL file: Dji+Avata+2+Simple.stl
+Opening file with CreateFileA
+File opened successfully
+Getting file size
+File size: 23030084 bytes
+Creating file mapping
+File mapping created successfully
+Mapping view of file
+File mapped successfully
+Triangle count from file: 460600
+Starting multi-threaded zero-copy parsing with 4 threads
+Triangles per thread: 115150
+Remaining triangles: 0
+Allocating block with size: 65600Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF34E60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF34E80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF34F90000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+ bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF34FF0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF34FB0000
+VirtualAlloc returned: 000001DF35010000
+Block allocated successfully
+VirtualAlloc returned: 000001DF34FD0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF35050000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36680000
+Block allocated successfully
+VirtualAlloc returned: 000001DF35030000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF366A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF366C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF366E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36700000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36740000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36760000
+Block allocated successfully
+VirtualAlloc returned: 000001DF36720000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF367A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF367C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF367E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAllocAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+
+VirtualAlloc returned: 000001DF36820000
+VirtualAlloc returned: 000001DF36780000
+Block allocated successfully
+VirtualAlloc returned: 000001DF36800000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36860000
+VirtualAlloc returned: 000001DF36880000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF368A0000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF368E0000
+Block allocated successfully
+Thread VirtualAlloc returned: 000001DF36840000
+Block allocated successfully
+29136 parsed Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36900000
+VirtualAlloc returned: 000001DF368C0000
+Block allocated successfully
+10000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAllocAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+
+VirtualAlloc returned: 000001DF36920000
+VirtualAlloc returned: 000001DF36960000
+Block allocated successfully
+VirtualAlloc returned: 000001DF36940000
+Block allocated successfully
+Block allocated successfullyThread 32292 parsed 10000 triangles...
+Block allocated successfullyAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36980000
+Block allocated successfully
+
+Allocating block with size: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF369A0000
+Block allocated successfully
+
+65600 bytesAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF369C0000
+Block allocated successfully
+Allocating block with size: 65600 bytesAllocating block with size: 65600 bytes
+
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36A00000
+Block allocated successfully
+VirtualAlloc returned: 000001DF369E0000
+Allocating block with size: 65600 bytesBlock allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36A20000
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36A40000
+VirtualAlloc returned: 000001DF36A60000
+Block allocated successfully
+
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: VirtualAlloc returned: 000001DF36A80000
+65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+VirtualAlloc returned: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36AE0000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36B00000
+Block allocated successfully
+000001DF36AA0000
+VirtualAlloc returned: 000001DF36AC0000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36B40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36B20000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36B60000
+Block allocated successfully
+VirtualAlloc returned: 000001DF36B80000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36BA0000
+Block allocated successfully
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36BE0000
+Block allocated successfully
+Thread 28716VirtualAlloc returned: 000001DF36BC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36C00000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+ parsed 10000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36C40000
+Block allocated successfully
+VirtualAlloc returned: Thread 32292 parsed 20000 triangles...
+Allocating block with size: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36C60000
+Block allocated successfully
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36C80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36CA0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36CC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAllocAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+
+VirtualAlloc returned: 000001DF36D00000
+Block allocated successfully
+VirtualAlloc returned: 000001DF36CE0000
+Block allocated successfully
+000001DF36C20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36D20000
+Block allocated successfully
+Allocating block with size: Thread 33520 parsed 10000 triangles...
+Allocating block with size: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36D60000
+Block allocated successfully
+65600 bytes
+Calling VirtualAlloc
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36DA0000
+Block allocated successfully
+Thread 29136 parsed Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36DC0000
+Block allocated successfully
+20000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36DE0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF36D80000
+Block allocated successfully
+VirtualAlloc returned: 000001DF36D40000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36E00000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36E20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36E60000
+Block allocated successfullyVirtualAlloc returned:
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36E80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36EC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36EE0000
+VirtualAlloc returned: 000001DF36EA0000
+Block allocated successfully
+000001DF36E40000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36F00000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36F20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36F40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36F60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36F80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36FA0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF36FE0000
+Block allocated successfully
+Allocating block with size: Thread 32292 parsed 30000 triangles...
+VirtualAlloc returned: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37020000
+VirtualAlloc returned: 000001DF37040000
+Block allocated successfully
+000001DF36FC0000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37060000
+VirtualAlloc returned: 000001DF37000000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37080000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF370C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF370E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37100000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37120000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: VirtualAlloc returned: 000001DF37140000
+Block allocated successfully
+000001DF370A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37160000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF371A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF371C0000
+VirtualAlloc returned: 000001DF37180000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF371E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37200000
+Thread 28716 parsed 20000 triangles...
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37220000
+Block allocated successfully
+Allocating block with size: Thread 33520 parsed 20000 triangles...
+Block allocated successfullyAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37260000
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37280000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF372A0000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF372C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF372E0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF37240000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37300000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37320000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37340000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37380000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF373A0000
+Block allocated successfully
+Allocating block with size: Thread 29136 parsed 30000 triangles...
+VirtualAlloc returned: 000001DF37360000
+Block allocated successfully
+Thread 32292 parsed 40000 triangles...
+65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF373C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37400000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37420000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37440000
+VirtualAlloc returned: 000001DF373E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37460000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37480000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF374A0000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF374E0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF374C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37500000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37520000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37540000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37560000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37580000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF375A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF375C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF375E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37620000
+VirtualAlloc returned: 000001DF37600000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37640000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37660000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37680000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF376A0000
+Block allocated successfully
+Thread 29136Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF376C0000
+Block allocated successfully
+ parsed 40000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF376E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: VirtualAlloc returned: 000001DF37700000
+Block allocated successfully
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37720000
+Thread 28716 parsed 30000 triangles...
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37760000
+Block allocated successfully
+VirtualAlloc returned: 000001DF37740000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37780000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF377C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF377E0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF377A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37800000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Thread 33520 parsed 30000 triangles...
+VirtualAlloc returned: 000001DF37820000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37840000
+Block allocated successfully
+Thread 32292Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37860000
+Block allocated successfully
+ parsed 50000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37880000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF378A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF378C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF378E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37900000
+Block allocated successfullyAllocating block with size:
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37920000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37960000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37980000
+Block allocated successfully
+VirtualAlloc returned: 000001DF37940000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF379A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF379C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF379E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37A00000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37A20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37A40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37A60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37A80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37AC0000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37AE0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37B00000
+Block allocated successfully
+000001DF37AA0000
+Block allocated successfully
+Block allocated successfullyThread 29136 parsed 50000 triangles...
+Thread 28716 parsed 40000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37B40000
+Block allocated successfully
+
+VirtualAlloc returned: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37B60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37B80000
+Block allocated successfully
+000001DF37B20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37BA0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37BC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37BE0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37C00000
+Block allocated successfully
+VirtualAlloc returned: 000001DF37C20000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37C40000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37C80000
+Block allocated successfully
+Thread 33520Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37CA0000
+Block allocated successfully
+ parsed 40000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37CC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37CE0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF37C60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37D00000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37D20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37D40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37D60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37D80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37DA0000
+Block allocated successfully
+Allocating block with size: 65600 bytesAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37DC0000
+Block allocated successfully
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37E00000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37E20000
+Block allocated successfully
+
+VirtualAlloc returned: 000001DF37DE0000
+Block allocated successfully
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37E40000
+Block allocated successfully
+VirtualAlloc returned: 000001DF37E60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37E80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37EA0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37EC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37EE0000
+Block allocated successfully
+Thread 32292Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37F00000
+Block allocated successfully
+ parsed Thread 28716 parsed 50000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37F40000
+Block allocated successfully
+60000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37F60000
+Block allocated successfully
+VirtualAlloc returned: 000001DF37F20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37FA0000
+VirtualAlloc returned: 000001DF37F80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF37FC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38020000
+VirtualAlloc returned: 000001DF38000000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38040000
+Block allocated successfully
+VirtualAlloc returned: 000001DF37FE0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38060000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38080000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF380A0000
+Block allocated successfully
+Allocating block with size: Thread 29136 parsed 60000 triangles...
+Block allocated successfullyAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF380C0000
+
+Allocating block with size: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF380E0000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: Thread 33520 parsed 50000 triangles...
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38100000
+65600 bytes
+Calling VirtualAlloc
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38140000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38160000
+Block allocated successfully
+VirtualAlloc returned: 000001DF38120000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38180000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF381A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF381C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF381E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38200000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38220000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38240000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38260000
+Allocating block with size: 65600 bytesAllocating block with size: 65600 bytesAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38280000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF382A0000
+
+Calling VirtualAlloc
+Block allocated successfully
+
+Calling VirtualAllocAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+
+VirtualAlloc returned: 000001DF38300000
+Block allocated successfully
+VirtualAlloc returned: 000001DF382E0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF382C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38320000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38340000
+Block allocated successfully
+Allocating block with size: Thread 28716 parsed 60000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38360000
+Block allocated successfully
+65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF383A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF383C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF383E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38400000
+VirtualAlloc returned: 000001DF38380000
+Block allocated successfully
+Thread 32292Block allocated successfully
+Allocating block with size: 65600 bytes
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38420000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38440000
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+ parsed 70000 triangles...
+VirtualAlloc returned: 000001DF38460000
+Block allocated successfully
+VirtualAlloc returned: 000001DF38480000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF384A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF384C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF384E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38500000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38520000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38540000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38560000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38580000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF385A0000
+Allocating block with size: 65600 bytes
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF385C0000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38620000
+Block allocated successfully
+VirtualAlloc returned: 000001DF38600000
+Thread 29136 parsed 70000 triangles...
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38640000
+Block allocated successfully
+VirtualAlloc returned: 000001DF385E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38660000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38680000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF386A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF386C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF386E0000
+Thread 28716 parsed 70000 triangles...
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38700000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38720000
+Block allocated successfully
+Allocating block with size: 65600 bytesAllocating block with size: 65600Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38760000
+VirtualAlloc returned: 000001DF38780000
+Block allocated successfully
+ bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38740000
+Block allocated successfully
+VirtualAlloc returned: 000001DF387A0000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38800000
+VirtualAlloc returned: 000001DF387E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38820000
+Block allocated successfully
+VirtualAlloc returned: 000001DF387C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38840000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38860000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38880000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF388A0000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF388C0000
+Block allocated successfully
+Thread 29136 parsed Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF388E0000
+Block allocated successfully
+Thread 33520Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38900000
+Block allocated successfully
+ parsed 60000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38920000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38940000
+Block allocated successfully
+80000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38960000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38980000
+Block allocated successfully
+Thread 28716Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF389A0000
+Block allocated successfully
+ parsed 80000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF389C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF389E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38A00000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38A20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38A40000
+Allocating block with size: 65600 bytesAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38A60000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38A80000
+Block allocated successfully
+Block allocated successfully
+
+Calling VirtualAlloc
+VirtualAlloc returned: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38AE0000
+Block allocated successfully
+000001DF38AA0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF38AC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38B00000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38B20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38B60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38B80000
+Block allocated successfully
+Thread 32292Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38B40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38BA0000
+Block allocated successfully
+ parsed 80000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38BE0000
+VirtualAlloc returned: 000001DF38BC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38C00000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38C20000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38C40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38C80000Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38CA0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF38C60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+
+Block allocated successfully
+VirtualAlloc returned: 000001DF38CC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38CE0000
+Block allocated successfully
+Allocating block with size: Thread 33520 parsed 70000 triangles...
+Thread 28716Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38D00000
+Block allocated successfully
+ parsed 90000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38D20000
+Block allocated successfully
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38D40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38D60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38DA0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38DC0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF38D80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38DE0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38E00000
+Allocating block with size: Block allocated successfully
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38E20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38E60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38E80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38EA0000Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38EC0000
+Block allocated successfully
+
+Block allocated successfully
+Allocating block with size: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38EE0000
+Block allocated successfully
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38F00000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38F20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38F40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38F60000
+Block allocated successfully
+VirtualAlloc returned: 000001DF38E40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38F80000
+Block allocated successfully
+Allocating block with size: 65600 bytesVirtualAlloc returned: 000001DF38FA0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38FC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF38FE0000
+Block allocated successfully
+Thread 33520 parsed 80000 triangles...
+
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39020000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39040000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39000000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39080000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF390A0000
+Allocating block with size: 65600 bytesAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF390C0000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytesVirtualAlloc returned: 000001DF39060000
+Block allocated successfully
+
+Calling VirtualAllocAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF390E0000
+Block allocated successfully
+
+VirtualAlloc returned: 000001DF39100000
+
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39120000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39140000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39160000
+Block allocated successfully
+Thread 29136 parsed 90000 triangles...
+Thread 28716 parsed 100000 triangles...
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39180000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF391A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF391C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF391E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39200000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39220000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39240000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39280000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF392A0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF39260000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF392C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF392E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39300000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39320000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39340000
+Block allocated successfully
+Thread 32292 parsed 90000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39360000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+000001DF39380000
+Allocating block with size: VirtualAlloc returned: 000001DF393A0000
+Block allocated successfully
+Block allocated successfully65600 bytesAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF393C0000
+Block allocated successfully
+
+Calling VirtualAlloc
+Allocating block with size: 65600 bytesVirtualAlloc returned: 000001DF393E0000
+
+Calling VirtualAlloc
+Block allocated successfully
+
+VirtualAlloc returned: 000001DF39420000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Thread 33520 parsed 90000 triangles...
+VirtualAlloc returned: 000001DF39460000
+Block allocated successfully
+VirtualAlloc returned: 000001DF39400000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39480000
+VirtualAlloc returned: 000001DF39440000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF394C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF394E0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF394A0000
+Block allocated successfully
+Allocating block with size: 65600 bytesThread 29136 parsed
+Calling VirtualAllocAllocating block with size: 65600 bytes100000 triangles...
+
+Calling VirtualAlloc
+Allocating block with size: 65600 bytesAllocating block with size: 65600 bytes
+Calling VirtualAlloc
+
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39540000
+VirtualAlloc returned: Block allocated successfully
+VirtualAlloc returned: 000001DF39500000
+Block allocated successfully
+
+000001DF39520000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39560000
+Block allocated successfully
+VirtualAlloc returned: Thread 28716 parsed 110000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF395A0000
+Block allocated successfully
+000001DF39580000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF395C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF395E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39600000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39620000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39640000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39660000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39680000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+VirtualAlloc returned: 000001DF396A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF396C0000
+Block allocated successfully
+Block allocated successfully
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF396E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39700000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39720000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39740000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39760000
+Block allocated successfully
+Allocating block with size: 65600 bytesBlock allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39780000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF397C0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF397A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF397E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39800000
+Block allocated successfully
+Thread 32292 parsed 100000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39820000
+Block allocated successfully
+Thread 28716 finished, parsed 115150 triangles
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39840000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39860000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF398A0000
+Block allocated successfully
+VirtualAlloc returned: 000001DF39880000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF398C0000
+Block allocated successfully
+Allocating block with size: Thread 29136 parsed 110000 triangles...
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF398E0000
+Block allocated successfully
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39900000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39920000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39940000
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39960000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39980000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF399A0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF399C0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF399E0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39A20000
+VirtualAlloc returned: 000001DF39A00000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39A40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39A60000
+Block allocated successfully
+Allocating block with size: Thread 29136 finished, parsed 115150 triangles
+Block allocated successfully
+65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39A80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39AA0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39AC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39AE0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39B00000
+Block allocated successfully
+Thread 33520 parsed 100000 triangles...
+Thread 32292 parsed Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39B20000
+Block allocated successfully
+110000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39B40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39B60000
+Allocating block with size: 65600 bytes
+Block allocated successfully
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39B80000
+VirtualAlloc returned: 000001DF39BA0000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39BC0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39C00000
+VirtualAlloc returned: 000001DF39BE0000
+Block allocated successfully
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39C20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39C40000
+Block allocated successfully
+Thread 32292 finished, parsed 115150 triangles
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39C60000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39C80000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39CA0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39CC0000
+Block allocated successfully
+Thread 33520 parsed 110000 triangles...
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39CE0000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39D00000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39D20000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39D40000
+Block allocated successfully
+Allocating block with size: 65600 bytes
+Calling VirtualAlloc
+VirtualAlloc returned: 000001DF39D60000
+Block allocated successfully
+Thread 33520 finished, parsed 115150 triangles
+Zero-copy parsing completed in 216767 microseconds
+Unmapping file
+Closing file mapping
+Closing file
+Total parsing process completed in 219545 microseconds
+Binary STL parsing completed, 460600 triangles parsed
+Successfully parsed 460600 triangles
+Creating RenderManager...
+Setting triangle data...
+Extracted 460600 triangles from ObjectPool
+Building BVH tree...
+Collected 460600 triangles for BVH build
+BVH build completed in 4.66918e+06 microseconds
+BVH node count: 296411
+Entering render loop...

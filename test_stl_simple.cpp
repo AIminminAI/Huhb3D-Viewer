@@ -2,6 +2,7 @@
 #include <chrono>
 #include <fstream>
 #include <vector>
+#include <string>
 
 // STL 三角形结构体
 struct Triangle {

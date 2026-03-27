@@ -42,7 +42,7 @@ jobs:
 
     - name: Upload Artifact (For manual runs)
       if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Huhb3D_Viewer_Windows
         path: Huhb3D_Viewer_Windows.zip

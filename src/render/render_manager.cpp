@@ -1,8 +1,9 @@
-﻿#include <cstdint>
+#include <cstdint>
 #include <iostream>
 #include <cmath>
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
@@ -176,7 +177,11 @@ RenderManager::RenderManager(int width, int height, const std::string& title)
       metallic(0.5f), roughness(0.5f),
       loadTime(0.0f), memoryUsage(0),
       selectedTriangle(nullptr), selectedTriangleIndex(-1), pickTime(0.0f),
-      showBVH(false) {
+      showBVH(false), showHighlight(false),
+      currentHighlightType(HighlightType::None),
+      highlightCalculated(false) {
+    // 启动命令分发器
+    commandDispatcher.start(8080);
     // 初始化相机位置
     cameraPosition[0] = 0.0f;
     cameraPosition[1] = 0.0f;
@@ -195,6 +200,11 @@ RenderManager::RenderManager(int width, int height, const std::string& title)
 }
 
 RenderManager::~RenderManager() {
+    // 等待计算线程完成
+    if (calculationThread.joinable()) {
+        calculationThread.join();
+    }
+    
     // 清理对象池
     if (trianglePool) {
         delete trianglePool;
@@ -273,6 +283,96 @@ void RenderManager::render() {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     updateImGui();
+    
+    // 处理来自网络的命令
+    while (commandDispatcher.hasCommand()) {
+        hhb::core::Command cmd = commandDispatcher.getCommand();
+        
+        std::cout << "Processing command: " << cmd.action << " with value: " << cmd.value << std::endl;
+        
+        if (trianglePool) {
+            if (calculationThread.joinable()) {
+                calculationThread.join();
+            }
+            
+            calculationThread = std::thread([this, cmd]() {
+                std::cout << "Starting analysis in background thread..." << std::endl;
+                
+                std::vector<hhb::core::Triangle*> result_parts;
+                HighlightType htype = HighlightType::None;
+                std::string desc;
+                
+                if (cmd.action == "check_thickness") {
+                    result_parts = geometryAPI.getThinParts(static_cast<float>(cmd.value));
+                    htype = HighlightType::ThinParts;
+                    desc = "薄弱部位 (厚度<" + std::to_string(static_cast<int>(cmd.value)) + "mm)";
+                    std::cout << "Found " << result_parts.size() << " thin parts" << std::endl;
+                }
+                else if (cmd.action == "find_curved_surfaces") {
+                    result_parts = geometryAPI.getCurvedSurfaces(static_cast<float>(cmd.value));
+                    htype = HighlightType::CurvedSurfaces;
+                    desc = "曲面/曲线区域 (曲率>" + std::to_string(static_cast<float>(cmd.value)) + ")";
+                    std::cout << "Found " << result_parts.size() << " curved surface triangles" << std::endl;
+                }
+                else if (cmd.action == "find_sharp_edges") {
+                    result_parts = geometryAPI.getSharpEdges(static_cast<float>(cmd.value));
+                    htype = HighlightType::SharpEdges;
+                    desc = "锐角/棱边区域 (角度>" + std::to_string(static_cast<int>(cmd.value)) + "°)";
+                    std::cout << "Found " << result_parts.size() << " sharp edge triangles" << std::endl;
+                }
+                else if (cmd.action == "find_flat_surfaces") {
+                    result_parts = geometryAPI.getFlatSurfaces(static_cast<float>(cmd.value));
+                    htype = HighlightType::FlatSurfaces;
+                    desc = "平面区域 (平坦度<" + std::to_string(static_cast<float>(cmd.value)) + ")";
+                    std::cout << "Found " << result_parts.size() << " flat surface triangles" << std::endl;
+                }
+                else {
+                    std::cout << "Unknown command action: " << cmd.action << std::endl;
+                    return;
+                }
+                
+                std::unordered_map<hhb::core::Triangle*, int> ptrToIndex;
+                int idx = 0;
+                trianglePool->for_each([&](hhb::core::Triangle* tri) {
+                    ptrToIndex[tri] = idx;
+                    idx++;
+                });
+                
+                std::vector<int> indices;
+                for (const auto& tri : result_parts) {
+                    auto it = ptrToIndex.find(tri);
+                    if (it != ptrToIndex.end()) {
+                        indices.push_back(it->second);
+                    }
+                }
+                
+                std::cout << "Matched " << indices.size() << " / " << result_parts.size() 
+                          << " triangles to VBO indices" << std::endl;
+                
+                {
+                    std::lock_guard<std::mutex> lock(highlightMutex);
+                    newHighlightIndices = std::move(indices);
+                    currentHighlightType = htype;
+                    lastAnalysisDesc = desc;
+                }
+                
+                highlightCalculated = true;
+                std::cout << "Analysis completed: " << desc << std::endl;
+            });
+        }
+    }
+    
+    if (highlightCalculated) {
+        {
+            std::lock_guard<std::mutex> lock(highlightMutex);
+            highlightIndices = std::move(newHighlightIndices);
+        }
+        
+        showHighlight = true;
+        highlightCalculated = false;
+        
+        std::cout << "Updated highlight indices: " << highlightIndices.size() << " parts (" << lastAnalysisDesc << ")" << std::endl;
+    }
     
     // 开启深度测试与背景清理
     glEnable(GL_DEPTH_TEST);
@@ -397,6 +497,8 @@ void RenderManager::render() {
         // 只绘制选中的三角形
         glDrawArrays(GL_TRIANGLES, selectedTriangleIndex * 3, 3);
     }
+    
+    highlightParts();
     
     // 解绑VAO
     glBindVertexArray(0);
@@ -874,6 +976,33 @@ void RenderManager::initImGui() {
     // 设置ImGui样式
     ImGui::StyleColorsDark();
     
+    // 配置ImGui以支持Unicode
+    ImGuiIO& io = ImGui::GetIO();
+    // 禁用键盘导航，避免键位映射问题
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // 启用键盘控制
+    
+    // 尝试加载系统字体以支持中文
+    // 首先添加默认字体
+    io.Fonts->AddFontDefault();
+    
+    // 直接加载微软雅黑字体并指定中文字符范围
+    ImFontConfig config;
+    config.MergeMode = false;
+    config.PixelSnapH = true;
+    if (ImFont* font = io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\msyh.ttc", 18.0f, &config, io.Fonts->GetGlyphRangesChineseFull())) {
+        std::cout << "Loaded Chinese font: C:\\Windows\\Fonts\\msyh.ttc" << std::endl;
+    } else {
+        // 尝试其他字体路径
+        if (ImFont* font = io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\msyh.ttf", 18.0f, &config, io.Fonts->GetGlyphRangesChineseFull())) {
+            std::cout << "Loaded Chinese font: C:\\Windows\\Fonts\\msyh.ttf" << std::endl;
+        } else {
+            std::cout << "Warning: Failed to load Chinese font" << std::endl;
+        }
+    }
+    
+    // 确保ImGui能够处理Unicode字符
+    io.Fonts->Build();
+    
     // 初始化ImGui与GLFW的绑定
     // 第二个参数 false 表示不自动安装回调，我们手动处理事件
     ImGui_ImplGlfw_InitForOpenGL(window, false);
@@ -1005,9 +1134,44 @@ void RenderManager::updateImGui() {
             selectedTriangle->vertex3[0], 
             selectedTriangle->vertex3[1], 
             selectedTriangle->vertex3[2]);
-    } else {
+    }
+    ImGui::Separator();
+    
+    // AI 交互区域
+    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "AI Assistant");
+    ImGui::InputText("User Input", userInputBuffer, sizeof(userInputBuffer));
+    if (ImGui::Button("Send", ImVec2(100, 30))) {
+        processUserInput();
+    }
+    ImGui::Checkbox("Show Highlight", &showHighlight);
+    if (showHighlight && !highlightIndices.empty()) {
+        const char* typeStr = "Unknown";
+        switch (currentHighlightType) {
+            case HighlightType::ThinParts: typeStr = "薄弱部位"; break;
+            case HighlightType::CurvedSurfaces: typeStr = "曲面/曲线"; break;
+            case HighlightType::SharpEdges: typeStr = "锐角/棱边"; break;
+            case HighlightType::FlatSurfaces: typeStr = "平面区域"; break;
+            default: break;
+        }
+        ImGui::Text("Analysis: %s", typeStr);
+        ImGui::Text("Highlighted parts: %zu", highlightIndices.size());
+    }
+    
+    if (selectedTriangleIndex < 0) {
         ImGui::TextDisabled("No triangle selected");
         ImGui::TextDisabled("Click on the model to pick");
+    }
+    
+    // 显示 AI 结果弹出窗口
+    if (ImGui::BeginPopup("AI Result")) {
+        ImGui::Text("Analysis Result");
+        ImGui::Separator();
+        ImGui::Text("Command executed successfully!");
+        ImGui::Text("Check console for detailed output.");
+        if (ImGui::Button("OK")) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
     
     ImGui::End();
@@ -1016,6 +1180,155 @@ void RenderManager::updateImGui() {
 void RenderManager::renderImGui() {
     // 渲染ImGui
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
+void RenderManager::processUserInput() {
+    std::string userInput(userInputBuffer);
+    if (userInput.empty()) {
+        return;
+    }
+    
+    // 设置控制台输出编码为 UTF-8，确保中文能正确显示
+    SetConsoleOutputCP(CP_UTF8);
+    
+    std::cout << "Processing user input: " << userInput << std::endl;
+    
+    // 鲁棒性检查：确保模型已加载
+    if (!trianglePool || trianglePool->size() == 0) {
+        std::cout << "No model loaded, cannot execute geometry algorithms" << std::endl;
+        ImGui::OpenPopup("AI Result");
+        return;
+    }
+    
+    // 语义匹配逻辑
+    if (userInput.find("法线") != std::string::npos || userInput.find("方向") != std::string::npos || userInput.find("normal") != std::string::npos) {
+        std::cout << "Detected normal check command" << std::endl;
+        
+        // 调用 GeometryExpert 执行 check_normals
+        std::string response = geometryExpert.executeCommand(R"({"command": "check_normals"})");
+        std::cout << "GeometryExpert response: " << response << std::endl;
+        
+        // 显示结果
+        ImGui::OpenPopup("AI Result");
+    }
+    else if (userInput.find("顶点") != std::string::npos || userInput.find("冗余") != std::string::npos || userInput.find("vertex") != std::string::npos) {
+        std::cout << "Detected isolated vertices check command" << std::endl;
+        
+        // 调用 GeometryExpert 执行 check_isolated_vertices
+        std::string response = geometryExpert.executeCommand(R"({"command": "check_isolated_vertices"})");
+        std::cout << "GeometryExpert response: " << response << std::endl;
+        
+        // 显示结果
+        ImGui::OpenPopup("AI Result");
+    }
+    else if (userInput.find("信息") != std::string::npos || userInput.find("大小") != std::string::npos || userInput.find("info") != std::string::npos) {
+        std::cout << "Detected model info command" << std::endl;
+        
+        // 调用 GeometryExpert 执行 get_model_info
+        std::string response = geometryExpert.executeCommand(R"({"command": "get_model_info"})");
+        std::cout << "GeometryExpert response: " << response << std::endl;
+        
+        // 显示结果
+        ImGui::OpenPopup("AI Result");
+    }
+    else if (userInput.find("制造错误") != std::string::npos || userInput.find("inject") != std::string::npos) {
+        std::cout << "Detected fault injection command" << std::endl;
+        
+        // 调用 GeometryExpert 执行 inject_fault
+        std::string response = geometryExpert.executeCommand(R"({"command": "inject_fault"})");
+        std::cout << "GeometryExpert response: " << response << std::endl;
+        
+        // 显示结果
+        ImGui::OpenPopup("AI Result");
+    }
+    else {
+        // 原有的 LLM 逻辑
+        std::string response = llmClient.sendToolCallRequest(userInput);
+        
+        if (!response.empty()) {
+            std::cout << "LLM response received" << std::endl;
+            
+            std::vector<hhb::core::LLMClient::ToolCall> tool_calls = llmClient.parseToolCalls(response);
+            
+            if (!tool_calls.empty()) {
+                std::cout << "Tool calls found: " << tool_calls.size() << std::endl;
+                
+                for (const auto& tool_call : tool_calls) {
+                    std::cout << "Tool name: " << tool_call.name << std::endl;
+                    
+                    if (tool_call.name == "analyze_model_thickness") {
+                        float threshold_mm = 1.0f;
+                        auto it = tool_call.parameters.find("threshold_mm");
+                        if (it != tool_call.parameters.end()) {
+                            try {
+                                threshold_mm = std::stof(it->second);
+                            } catch (const std::exception& e) {
+                                std::cerr << "Failed to parse threshold_mm: " << e.what() << std::endl;
+                            }
+                        }
+                        
+                        std::cout << "Analyzing model thickness with threshold: " << threshold_mm << "mm" << std::endl;
+                        
+                        if (trianglePool) {
+                            highlightIndices.clear();
+                            
+                            std::vector<hhb::core::Triangle*> thin_parts = geometryAPI.getThinParts(threshold_mm);
+                            
+                            std::cout << "Found " << thin_parts.size() << " thin parts" << std::endl;
+                            
+                            for (const auto& thin_tri : thin_parts) {
+                                for (size_t i = 0; i < triangleCount; ++i) {
+                                    if (&(*trianglePool)[i] == thin_tri) {
+                                        highlightIndices.push_back(static_cast<int>(i));
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            currentHighlightType = HighlightType::ThinParts;
+                            showHighlight = true;
+                            lastAnalysisDesc = "薄弱部位 (厚度<" + std::to_string(static_cast<int>(threshold_mm)) + "mm)";
+                        }
+                    }
+                }
+            } else {
+                std::cout << "No tool calls found in response." << std::endl;
+            }
+        } else {
+            std::cerr << "Error: " << llmClient.getLastError() << std::endl;
+        }
+    }
+}
+
+void RenderManager::highlightParts() {
+    if (!showHighlight || highlightIndices.empty()) {
+        return;
+    }
+    
+    GLint isSelectedLoc = glGetUniformLocation(shaderProgram, "isSelected");
+    GLint highlightColorLoc = glGetUniformLocation(shaderProgram, "highlightColor");
+    
+    float color[3] = {1.0f, 0.0f, 0.0f};
+    switch (currentHighlightType) {
+        case HighlightType::ThinParts:
+            color[0] = 1.0f; color[1] = 0.0f; color[2] = 0.0f; break;
+        case HighlightType::CurvedSurfaces:
+            color[0] = 0.0f; color[1] = 1.0f; color[2] = 0.5f; break;
+        case HighlightType::SharpEdges:
+            color[0] = 1.0f; color[1] = 0.5f; color[2] = 0.0f; break;
+        case HighlightType::FlatSurfaces:
+            color[0] = 0.0f; color[1] = 0.5f; color[2] = 1.0f; break;
+        default: break;
+    }
+    
+    if (isSelectedLoc != -1 && highlightColorLoc != -1) {
+        glUniform1i(isSelectedLoc, GL_TRUE);
+        glUniform3fv(highlightColorLoc, 1, color);
+        
+        for (int index : highlightIndices) {
+            glDrawArrays(GL_TRIANGLES, index * 3, 3);
+        }
+    }
 }
 
 void RenderManager::shutdownImGui() {
@@ -1130,6 +1443,13 @@ void RenderManager::loadFile(const std::string& filename) {
         selectedTriangle = nullptr;
         selectedTriangleIndex = -1;
         pickTime = 0.0f;
+        
+        geometryAPI.loadFromPool(*trianglePool);
+        std::cout << "Model loaded into GeometryAPI from shared pool: " << geometryAPI.getTriangleCount() << " triangles" << std::endl;
+        
+        // 加载模型到 GeometryExpert
+        geometryExpert.loadModelFromPool(*trianglePool);
+        std::cout << "Model loaded into GeometryExpert from shared pool" << std::endl;
         
         printf("Model loading complete. Triangle count: %zu\n", triangleCount);
         fflush(stdout);

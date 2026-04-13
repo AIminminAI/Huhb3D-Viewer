@@ -32,6 +32,10 @@ add_library(hhb_cad_core STATIC
     src/core/stl_parser.cpp
     src/core/bvh.cpp
     src/core/hhb_cad_c_api.cpp
+    src/core/geometry_api.cpp
+    src/core/llm_client.cpp
+    src/core/command_dispatcher.cpp
+    src/Algorithm/GeometryExpert.cpp
 )
 
 # 测试可执行文件
@@ -87,6 +91,21 @@ add_executable(generate_stl
     src/core/generate_stl.cpp
 )
 
+# Geometry API 测试
+add_executable(test_geometry_api
+    test_geometry_api.cpp
+)
+
+# LLM Client 测试
+add_executable(test_llm_client
+    test_llm_client.cpp
+)
+
+# Function Calling 测试
+add_executable(test_function_calling
+    test_function_calling.cpp
+)
+
 # 链接核心库
 target_link_libraries(test_object_pool PRIVATE hhb_cad_core)
 target_link_libraries(test_stl_parser PRIVATE hhb_cad_core)
@@ -96,6 +115,17 @@ target_link_libraries(test_robust_predicates PRIVATE hhb_cad_core)
 target_link_libraries(test_c_api PRIVATE hhb_cad_core)
 target_link_libraries(benchmark_test PRIVATE hhb_cad_core)
 target_link_libraries(generate_stl PRIVATE hhb_cad_core)
+target_link_libraries(test_geometry_api PRIVATE hhb_cad_core)
+target_link_libraries(test_llm_client PRIVATE hhb_cad_core)
+target_link_libraries(test_function_calling PRIVATE hhb_cad_core)
+
+# 为核心库添加依赖
+# nlohmann/json.hpp 已直接包含在 include 目录中
+
+# 链接 ws2_32 库用于 Windows Socket API
+if(WIN32)
+    target_link_libraries(hhb_cad_core PRIVATE ws2_32)
+endif()
 
 # 基准测试 - 暂时禁用，因为缺少benchmark库
 # find_package(benchmark REQUIRED)

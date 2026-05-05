@@ -1,0 +1,120 @@
+{
+  "AICommandManager": {
+    "description": "AICommandManager 是一个管理 3D 模型操作的类，提供了加载模型、控制相机、设置高亮等功能。",
+    "functions": {
+      "loadModel": {
+        "description": "加载 STL 模型文件。",
+        "parameters": {
+          "filename": "模型文件的路径"
+        },
+        "call_when": "当用户提到加载、导入、打开模型文件时调用。",
+        "examples": [
+          "加载模型 cube.stl",
+          "导入文件 sphere.stl",
+          "打开模型文件"
+        ]
+      },
+      "resetCamera": {
+        "description": "将相机重置到默认位置。",
+        "parameters": {},
+        "call_when": "当用户要求重置相机、回到初始视角、恢复默认视图时调用。",
+        "examples": [
+          "重置相机",
+          "回到初始视角",
+          "恢复默认视图"
+        ]
+      },
+      "setCameraPosition": {
+        "description": "设置相机的位置。",
+        "parameters": {
+          "x": "相机的 X 坐标",
+          "y": "相机的 Y 坐标",
+          "z": "相机的 Z 坐标"
+        },
+        "call_when": "当用户要求移动相机、改变视角位置时调用。",
+        "examples": [
+          "将相机移动到 (1, 2, 3) 位置",
+          "把相机移近一点",
+          "调整相机位置"
+        ]
+      },
+      "setCameraRotation": {
+        "description": "设置相机的旋转角度。",
+        "parameters": {
+          "pitch": "相机的俯仰角（上下旋转）",
+          "yaw": "相机的偏航角（左右旋转）"
+        },
+        "call_when": "当用户要求旋转模型、改变视角方向、从不同角度查看模型时调用。",
+        "examples": [
+          "旋转模型 90 度",
+          "从侧面查看",
+          "从顶部查看"
+        ]
+      },
+      "setZoom": {
+        "description": "设置相机的缩放级别。",
+        "parameters": {
+          "zoom": "缩放级别，大于 1 表示放大，小于 1 表示缩小"
+        },
+        "call_when": "当用户要求放大、缩小、调整视图大小、看清楚细节、说'看不清'时调用。",
+        "examples": [
+          "放大模型",
+          "缩小视图",
+          "看清楚细节",
+          "看不清，放大一点",
+          "太大了，缩小一点"
+        ]
+      },
+      "setHighlight": {
+        "description": "设置模型的高亮部分。",
+        "parameters": {
+          "type": "高亮类型：1=薄部分, 2=曲面, 3=锐边, 4=平面",
+          "indices": "要高亮的三角形索引列表"
+        },
+        "call_when": "当用户要求高亮、标记、显示特定部分时调用。",
+        "examples": [
+          "高亮薄部分",
+          "显示曲面",
+          "标记锐边"
+        ]
+      },
+      "setPBRParams": {
+        "description": "设置 PBR（Physically Based Rendering）参数。",
+        "parameters": {
+          "metallic": "金属度，0-1 之间",
+          "roughness": "粗糙度，0-1 之间"
+        },
+        "call_when": "当用户要求调整材质、金属感、粗糙度、光泽度、说'太暗了'时调用。",
+        "examples": [
+          "增加金属感",
+          "降低粗糙度",
+          "调整材质",
+          "太暗了，增加亮度",
+          "太亮了，降低亮度"
+        ]
+      },
+      "clearHighlight": {
+        "description": "清除模型的所有高亮。",
+        "parameters": {},
+        "call_when": "当用户要求清除高亮、取消标记时调用。",
+        "examples": [
+          "清除高亮",
+          "取消标记",
+          "恢复正常视图"
+        ]
+      },
+      "executeAnalysis": {
+        "description": "执行模型分析命令。",
+        "parameters": {
+          "command": "分析命令"
+        },
+        "call_when": "当用户要求分析模型、检查模型、计算属性时调用。",
+        "examples": [
+          "分析模型",
+          "检查模型质量",
+          "计算表面积"
+        ]
+      }
+    }
+  }
+}

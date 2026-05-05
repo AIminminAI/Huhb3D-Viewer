@@ -1,3 +1,10 @@
+graph TD
+    A[CAD模型: .stl/.obj] --> B[C++ 渲染引擎]
+    B --> C{BVH 加速算法}
+    C --> D[生成 1000 张 RGB 图像]
+    C --> E[生成 1000 张 语义 Mask]
+    D & E --> F[打包为 .zip 交付物]
+
 # Huhb3D Synthetic Data Generator (具身智能合成数据生成器)
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)

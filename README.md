@@ -37,6 +37,8 @@ graph TD
 
 ![AI交互演示](docs/images/HuhbViewer.gif)
 
+![AI交互演示](docs/images/demo_synthetic_data.gif)
+
 ![RGB 样例](frame_0034.png)
 
 ![Mask 样例](mask_0034.png)

@@ -23,6 +23,12 @@ graph TD
     C --> D[生成 1000 张 RGB 图像]
     C --> E[生成 1000 张 语义 Mask]
     D & E --> F[打包为 .zip 交付物]
+
+性能项,表现
+渲染引擎,C++ OpenGL 4.5
+加速技术,BVH (层次包围盒) 零拷贝解析
+生成速度,约 0.5秒 / 每对图像 (800x600)
+导出格式,RGB PNG + Semantic Mask PNG
     
 
 ## 📸 运行效果
@@ -31,7 +37,7 @@ graph TD
 
 ![AI交互演示](docs/images/HuhbViewer.gif)
 
-![RGB 样例](mask_0034.png)
+![RGB 样例](frame_0034.png)
 
 ![Mask 样例](mask_0034.png)
 

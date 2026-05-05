@@ -1,3 +1,7 @@
+#ifdef _WIN32
+#define NOMINMAX
+#endif
+
 #include "geometry_api.h"
 #include <iostream>
 #include <cmath>
@@ -243,6 +247,14 @@ std::vector<Triangle*> GeometryAPI::getFlatSurfaces(float flatness_threshold) co
 
 std::vector<Triangle*> GeometryAPI::getHighCurvatureRegions(float curvature_threshold) const {
     return getCurvedSurfaces(curvature_threshold);
+}
+
+std::unordered_map<Triangle*, int> GeometryAPI::getTriangleIndexMap() const {
+    std::unordered_map<Triangle*, int> map;
+    for (size_t i = 0; i < triangles_.size(); ++i) {
+        map[triangles_[i]] = static_cast<int>(i);
+    }
+    return map;
 }
 
 std::vector<Intersection> GeometryAPI::getIntersectingPoints(const Ray& ray) const {

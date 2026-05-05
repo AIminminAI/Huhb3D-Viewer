@@ -1,16 +1,21 @@
+#ifdef _WIN32
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <cstdint>
 #include <iostream>
 #include <cmath>
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <fstream>
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <commdlg.h>
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -25,7 +30,23 @@
 
 #include <chrono>
 #include <thread>
+#include <iomanip>
+#include <sstream>
+#include <filesystem>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #include "render_manager.h"
+#include "../skill/ISkill.h"
+#include "../skill/SkillRegistry.h"
+#include "../skill/AutoRotateSkill.h"
+#include "../skill/ResetCameraSkill.h"
+#include "../skill/ZoomInSkill.h"
+#include "../skill/RotateSkill.h"
+#include "../skill/OptimizeViewSkill.h"
+#include "../skill/MeasureModelSkill.h"
+#include "../skill/AnalyzeGeometrySkill.h"
 
 namespace hhb {
 namespace render {
@@ -169,9 +190,40 @@ const char* fragmentShaderSource = "\n"
 "    FragColor = vec4(color, 1.0);\n"
 "}\n";
 
+const char* labelVertexShaderSource = "\n"
+"#version 330\n"
+"layout (location = 0) in vec3 aPos;\n"
+"layout (location = 1) in vec3 aLabelColor;\n"
+"\n"
+"uniform mat4 model;\n"
+"uniform mat4 view;\n"
+"uniform mat4 projection;\n"
+"\n"
+"out vec3 LabelColor;\n"
+"\n"
+"void main()\n"
+"{\n"
+"    LabelColor = aLabelColor;\n"
+"    gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
+"}\n";
+
+const char* labelFragmentShaderSource = "\n"
+"#version 330\n"
+"out vec4 FragColor;\n"
+"\n"
+"in vec3 LabelColor;\n"
+"\n"
+"void main()\n"
+"{\n"
+"    FragColor = vec4(LabelColor, 1.0);\n"
+"}\n";
+
 RenderManager::RenderManager(int width, int height, const std::string& title)
     : width(width), height(height), title(title), window(nullptr),
-      VAO(0), VBO(0), shaderProgram(0), triangleCount(0),
+      VAO(0), VBO(0), shaderProgram(0),
+      labelVAO(0), labelVBO(0), labelShaderProgram(0),
+      labelModeActive(false), faceCategoriesComputed(false),
+      triangleCount(0),
       trianglePool(nullptr),
       zoom(1.0f), frameCount(0), lastFpsUpdate(0.0f), fps(0.0f),
       metallic(0.5f), roughness(0.5f),
@@ -179,10 +231,9 @@ RenderManager::RenderManager(int width, int height, const std::string& title)
       selectedTriangle(nullptr), selectedTriangleIndex(-1), pickTime(0.0f),
       showBVH(false), showHighlight(false),
       currentHighlightType(HighlightType::None),
-      highlightCalculated(false) {
-    // 启动命令分发器
+      highlightCalculated(false),
+      highlightBlinkTimer_(0.0f), highlightBlinkState_(true) {
     commandDispatcher.start(8080);
-    // 初始化相机位置
     cameraPosition[0] = 0.0f;
     cameraPosition[1] = 0.0f;
     cameraPosition[2] = 5.0f;
@@ -194,6 +245,21 @@ RenderManager::RenderManager(int width, int height, const std::string& title)
     // 初始化时间
     lastFrame = std::chrono::steady_clock::now();
     deltaTime = 0.0f;
+    
+    // 自动旋转初始化
+    autoRotate = false;
+    autoRotateSpeed = 0.5f;
+    automationMode = false;
+
+    // 相机动画初始化
+    cameraAnimating = false;
+    targetCameraPos[0] = targetCameraPos[1] = targetCameraPos[2] = 0.0f;
+    targetCameraRot[0] = targetCameraRot[1] = 0.0f;
+    cameraPosStart[0] = cameraPosStart[1] = cameraPosStart[2] = 0.0f;
+    cameraRotStart[0] = cameraRotStart[1] = 0.0f;
+    targetZoom = 1.0f;
+    zoomStart = 1.0f;
+    cameraAnimDuration = 0.5f;
     
     // 初始化文件路径缓冲区
     memset(filePathBuffer, 0, sizeof(filePathBuffer));
@@ -219,11 +285,31 @@ RenderManager::~RenderManager() {
     glDeleteBuffers(1, &VBO);
     glDeleteProgram(shaderProgram);
     
+    glDeleteVertexArrays(1, &labelVAO);
+    glDeleteBuffers(1, &labelVBO);
+    glDeleteProgram(labelShaderProgram);
+    
     // 清理GLFW
     if (window) {
         glfwDestroyWindow(window);
     }
     glfwTerminate();
+}
+
+void RenderManager::initSkills() {
+    // 获取技能注册表实例
+    auto& registry = skill::SkillRegistry::getInstance();
+    
+    // 注册技能
+    registry.registerSkill("auto_rotate", std::make_unique<skill::AutoRotateSkill>(*this));
+    registry.registerSkill("reset_camera", std::make_unique<skill::ResetCameraSkill>(*this));
+    registry.registerSkill("zoom_in", std::make_unique<skill::ZoomInSkill>(*this));
+    registry.registerSkill("rotate", std::make_unique<skill::RotateSkill>(*this));
+    registry.registerSkill("optimize_view", std::make_unique<skill::OptimizeViewSkill>(*this));
+    registry.registerSkill("measure_model", std::make_unique<skill::MeasureModelSkill>(*this));
+    registry.registerSkill("analyze_geometry", std::make_unique<skill::AnalyzeGeometrySkill>(*this));
+    
+    std::cout << "Skills initialized successfully" << std::endl;
 }
 
 bool RenderManager::initialize() {
@@ -266,6 +352,11 @@ bool RenderManager::initialize() {
         return false;
     }
     
+    // 初始化标签模式着色器
+    if (!initLabelShaders()) {
+        std::cerr << "Warning: Label shader initialization failed" << std::endl;
+    }
+    
     // 初始化缓冲区
     if (!initBuffers()) {
         return false;
@@ -274,15 +365,32 @@ bool RenderManager::initialize() {
     // 初始化ImGui
     initImGui();
     
+    initSkills();
+
+    // 初始化具身智能 Agent：将几何分析能力注册为 LLM 可调用的工具
+    // 设置结果回调，当工具执行完成后自动更新 OpenGL 高亮
+    embodiedAgent_.setResultCallback([this](const std::vector<int>& indices, HighlightType type, const std::string& desc) {
+        onToolResult(indices, type, desc);
+    });
+
+    // 默认配置（用户可通过 UI 修改）
+    embodiedAgent_.initialize(
+        "https://api.openai.com",
+        "",
+        "gpt-4o-mini",
+        &geometryAPI
+    );
+    
     return true;
 }
 
 void RenderManager::render() {
-    // 开始ImGui帧
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    updateImGui();
+    if (!automationMode) {
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        updateImGui();
+    }
     
     // 处理来自网络的命令
     while (commandDispatcher.hasCommand()) {
@@ -373,6 +481,11 @@ void RenderManager::render() {
         
         std::cout << "Updated highlight indices: " << highlightIndices.size() << " parts (" << lastAnalysisDesc << ")" << std::endl;
     }
+
+    // 检查具身智能 Agent 的异步结果
+    if (embodiedAgent_.isProcessing()) {
+        embodiedAgent_.checkPendingResult();
+    }
     
     // 开启深度测试与背景清理
     glEnable(GL_DEPTH_TEST);
@@ -381,6 +494,55 @@ void RenderManager::render() {
     
     // 使用着色器程序
     glUseProgram(shaderProgram);
+    
+    // 计算 deltaTime
+    auto currentFrame = std::chrono::steady_clock::now();
+    deltaTime = std::chrono::duration<float>(currentFrame - lastFrame).count();
+    lastFrame = currentFrame;
+    
+    // 自动旋转逻辑
+    if (autoRotate) {
+        cameraRotation[1] += autoRotateSpeed * deltaTime;
+        if (cameraRotation[1] > 360.0f) {
+            cameraRotation[1] -= 360.0f;
+        }
+    }
+
+    // 相机平滑动画更新
+    if (cameraAnimating) {
+        auto now = std::chrono::steady_clock::now();
+        float elapsed = std::chrono::duration<float>(now - cameraAnimStart).count();
+        float t = std::min(elapsed / cameraAnimDuration, 1.0f);
+
+        // 使用 smoothstep 进行平滑插值
+        t = t * t * (3.0f - 2.0f * t);
+
+        // 插值相机位置
+        cameraPosition[0] = cameraPosStart[0] + (targetCameraPos[0] - cameraPosStart[0]) * t;
+        cameraPosition[1] = cameraPosStart[1] + (targetCameraPos[1] - cameraPosStart[1]) * t;
+        cameraPosition[2] = cameraPosStart[2] + (targetCameraPos[2] - cameraPosStart[2]) * t;
+
+        // 插值相机旋转
+        cameraRotation[0] = cameraRotStart[0] + (targetCameraRot[0] - cameraRotStart[0]) * t;
+        cameraRotation[1] = cameraRotStart[1] + (targetCameraRot[1] - cameraRotStart[1]) * t;
+
+        // 插值缩放
+        zoom = zoomStart + (targetZoom - zoomStart) * t;
+
+        // 检查动画是否完成
+        if (t >= 1.0f) {
+            cameraAnimating = false;
+            cameraPosition[0] = targetCameraPos[0];
+            cameraPosition[1] = targetCameraPos[1];
+            cameraPosition[2] = targetCameraPos[2];
+            cameraRotation[0] = targetCameraRot[0];
+            cameraRotation[1] = targetCameraRot[1];
+            zoom = targetZoom;
+        }
+    }
+
+    // 更新 FPS
+    updateFPS();
     
     // 设置模型矩阵 - 简单的单位矩阵
     float model[16] = {
@@ -508,9 +670,10 @@ void RenderManager::render() {
         renderBVH();
     }
     
-    // 渲染ImGui（必须在最后，这样它才能覆盖在3D场景之上）
-    ImGui::Render();
-    renderImGui();
+    if (!automationMode) {
+        ImGui::Render();
+        renderImGui();
+    }
     
     // 更新FPS
     updateFPS();
@@ -713,6 +876,211 @@ bool RenderManager::initShaders() {
     }
     
     return true;
+}
+
+bool RenderManager::initLabelShaders() {
+    labelShaderProgram = createShaderProgram(labelVertexShaderSource, labelFragmentShaderSource);
+    if (!labelShaderProgram) {
+        std::cerr << "Failed to create label shader program" << std::endl;
+        return false;
+    }
+
+    glGenVertexArrays(1, &labelVAO);
+    glGenBuffers(1, &labelVBO);
+
+    glBindVertexArray(labelVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, labelVBO);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    return true;
+}
+
+void RenderManager::categoryToColor(int categoryId, float* outR, float* outG, float* outB) {
+    switch (categoryId) {
+        case 0:  *outR = 0.50f; *outG = 0.50f; *outB = 0.50f; break;
+        case 1:  *outR = 0.00f; *outG = 0.00f; *outB = 1.00f; break;
+        case 2:  *outR = 0.00f; *outG = 1.00f; *outB = 0.00f; break;
+        case 3:  *outR = 1.00f; *outG = 0.00f; *outB = 0.00f; break;
+        case 4:  *outR = 1.00f; *outG = 1.00f; *outB = 0.00f; break;
+        case 5:  *outR = 1.00f; *outG = 0.00f; *outB = 1.00f; break;
+        case 6:  *outR = 0.00f; *outG = 1.00f; *outB = 1.00f; break;
+        case 7:  *outR = 1.00f; *outG = 0.50f; *outB = 0.00f; break;
+        case 8:  *outR = 0.50f; *outG = 0.00f; *outB = 1.00f; break;
+        case 9:  *outR = 0.00f; *outG = 0.50f; *outB = 1.00f; break;
+        default: *outR = 1.00f; *outG = 1.00f; *outB = 1.00f; break;
+    }
+}
+
+void RenderManager::computeFaceCategories() {
+    if (!trianglePool || triangleCount == 0) {
+        faceCategoryIds.clear();
+        faceCategoriesComputed = false;
+        return;
+    }
+
+    faceCategoryIds.resize(triangleCount, 0);
+
+    trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        static size_t idx = 0;
+        if (idx >= triangleCount) {
+            idx = 0;
+        }
+
+        float nx = tri->normal[0];
+        float ny = tri->normal[1];
+        float nz = tri->normal[2];
+        float nLen = std::sqrt(nx * nx + ny * ny + nz * nz);
+        if (nLen > 0.0001f) { nx /= nLen; ny /= nLen; nz /= nLen; }
+
+        float absNx = std::abs(nx);
+        float absNy = std::abs(ny);
+        float absNz = std::abs(nz);
+        float maxComp = std::max({absNx, absNy, absNz});
+
+        float e1[3] = {tri->vertex2[0] - tri->vertex1[0],
+                        tri->vertex2[1] - tri->vertex1[1],
+                        tri->vertex2[2] - tri->vertex1[2]};
+        float e2[3] = {tri->vertex3[0] - tri->vertex1[0],
+                        tri->vertex3[1] - tri->vertex1[1],
+                        tri->vertex3[2] - tri->vertex1[2]};
+        float cross[3] = {
+            e1[1] * e2[2] - e1[2] * e2[1],
+            e1[2] * e2[0] - e1[0] * e2[2],
+            e1[0] * e2[1] - e1[1] * e2[0]
+        };
+        float area = 0.5f * std::sqrt(cross[0]*cross[0] + cross[1]*cross[1] + cross[2]*cross[2]);
+
+        int category = 0;
+
+        if (area < 0.00001f) {
+            category = 7;
+        }
+        else if (maxComp > 0.98f) {
+            if (absNy > 0.98f)       category = 1;
+            else if (absNx > 0.98f)  category = 2;
+            else                     category = 3;
+        }
+        else if (maxComp > 0.85f) {
+            if (absNy >= absNx && absNy >= absNz) category = 4;
+            else if (absNx >= absNz)              category = 5;
+            else                                  category = 6;
+        }
+        else {
+            category = 0;
+        }
+
+        faceCategoryIds[idx] = category;
+        idx++;
+    });
+
+    faceCategoriesComputed = true;
+    printf("[LabelMode] Face categories computed: %zu triangles classified\n", faceCategoryIds.size());
+    fflush(stdout);
+}
+
+void RenderManager::updateLabelVertexData() {
+    if (!faceCategoriesComputed || faceCategoryIds.empty()) {
+        computeFaceCategories();
+    }
+
+    std::vector<float> labelData;
+    labelData.reserve(triangleCount * 3 * 6);
+
+    size_t triIdx = 0;
+    if (trianglePool) {
+        trianglePool->for_each([&](hhb::core::Triangle* tri) {
+            int catId = (triIdx < faceCategoryIds.size()) ? faceCategoryIds[triIdx] : 0;
+            float r, g, b;
+            categoryToColor(catId, &r, &g, &b);
+
+            labelData.push_back(tri->vertex1[0]); labelData.push_back(tri->vertex1[1]); labelData.push_back(tri->vertex1[2]);
+            labelData.push_back(r); labelData.push_back(g); labelData.push_back(b);
+
+            labelData.push_back(tri->vertex2[0]); labelData.push_back(tri->vertex2[1]); labelData.push_back(tri->vertex2[2]);
+            labelData.push_back(r); labelData.push_back(g); labelData.push_back(b);
+
+            labelData.push_back(tri->vertex3[0]); labelData.push_back(tri->vertex3[1]); labelData.push_back(tri->vertex3[2]);
+            labelData.push_back(r); labelData.push_back(g); labelData.push_back(b);
+
+            triIdx++;
+        });
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, labelVBO);
+    glBufferData(GL_ARRAY_BUFFER, labelData.size() * sizeof(float), labelData.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void RenderManager::renderLabelMode() {
+    if (!labelShaderProgram || triangleCount == 0) return;
+
+    glUseProgram(labelShaderProgram);
+
+    float modelMat[16] = {
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    };
+    GLint modelLoc = glGetUniformLocation(labelShaderProgram, "model");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, modelMat);
+
+    float distance = 5.0f / zoom;
+    float cx = cosf(cameraRotation[0]);
+    float sx = sinf(cameraRotation[0]);
+    float cy = cosf(cameraRotation[1]);
+    float sy = sinf(cameraRotation[1]);
+    float camPosX = cameraPosition[0] + distance * cx * sy;
+    float camPosY = cameraPosition[1] + distance * sx;
+    float camPosZ = cameraPosition[2] + distance * cx * cy;
+
+    float view[16] = {
+        cy, -sx*sy, -cx*sy, 0.0f,
+        0.0f, cx, -sx, 0.0f,
+        sy, sx*cy, cx*cy, 0.0f,
+        0.0f, 0.0f, -distance, 1.0f
+    };
+    view[12] = -(view[0]*camPosX + view[4]*camPosY + view[8]*camPosZ);
+    view[13] = -(view[1]*camPosX + view[5]*camPosY + view[9]*camPosZ);
+    view[14] = -(view[2]*camPosX + view[6]*camPosY + view[10]*camPosZ);
+
+    GLint viewLoc = glGetUniformLocation(labelShaderProgram, "view");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, view);
+
+    float aspect = (float)width / (float)height;
+    float fov = 45.0f;
+    float nearPlane = 0.1f;
+    float farPlane = 1000.0f;
+    float f = 1.0f / tanf(fov * 0.5f * 3.1415926535f / 180.0f);
+    float projection[16] = {
+        f / aspect, 0.0f, 0.0f, 0.0f,
+        0.0f, f, 0.0f, 0.0f,
+        0.0f, 0.0f, (farPlane + nearPlane) / (nearPlane - farPlane), -1.0f,
+        0.0f, 0.0f, (2.0f * farPlane * nearPlane) / (nearPlane - farPlane), 0.0f
+    };
+    GLint projectionLoc = glGetUniformLocation(labelShaderProgram, "projection");
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, projection);
+
+    glBindVertexArray(labelVAO);
+    glDrawArrays(GL_TRIANGLES, 0, triangleCount * 3);
+    glBindVertexArray(0);
+
+    glUseProgram(0);
+}
+
+void RenderManager::setLabelMode(bool active) {
+    labelModeActive = active;
+    if (active && !faceCategoriesComputed) {
+        computeFaceCategories();
+        updateLabelVertexData();
+    }
 }
 
 bool RenderManager::initBuffers() {
@@ -1137,41 +1505,114 @@ void RenderManager::updateImGui() {
     }
     ImGui::Separator();
     
-    // AI 交互区域
-    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "AI Assistant");
-    ImGui::InputText("User Input", userInputBuffer, sizeof(userInputBuffer));
-    if (ImGui::Button("Send", ImVec2(100, 30))) {
+    // 具身智能 AI 助手交互区域
+    ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "Embodied AI Assistant");
+    ImGui::Separator();
+
+    // 显示 Agent 状态
+    auto agentState = embodiedAgent_.getState();
+    if (agentState == hhb::core::EmbodiedAIState::Processing ||
+        agentState == hhb::core::EmbodiedAIState::ToolExecuting) {
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "State: %s", embodiedAgent_.getStateString().c_str());
+    } else if (agentState == hhb::core::EmbodiedAIState::Error) {
+        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "State: %s", embodiedAgent_.getStateString().c_str());
+    } else {
+        ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "State: Ready");
+    }
+
+    ImGui::InputText("##AIInput", userInputBuffer, sizeof(userInputBuffer));
+    ImGui::SameLine();
+    if (ImGui::Button("Send", ImVec2(80, 20))) {
         processUserInput();
     }
+
     ImGui::Checkbox("Show Highlight", &showHighlight);
     if (showHighlight && !highlightIndices.empty()) {
         const char* typeStr = "Unknown";
         switch (currentHighlightType) {
-            case HighlightType::ThinParts: typeStr = "薄弱部位"; break;
-            case HighlightType::CurvedSurfaces: typeStr = "曲面/曲线"; break;
-            case HighlightType::SharpEdges: typeStr = "锐角/棱边"; break;
-            case HighlightType::FlatSurfaces: typeStr = "平面区域"; break;
+            case HighlightType::ThinParts: typeStr = "Weak Structure"; break;
+            case HighlightType::CurvedSurfaces: typeStr = "Curved Surfaces"; break;
+            case HighlightType::SharpEdges: typeStr = "Sharp Edges"; break;
+            case HighlightType::FlatSurfaces: typeStr = "Flat Surfaces"; break;
             default: break;
         }
-        ImGui::Text("Analysis: %s", typeStr);
-        ImGui::Text("Highlighted parts: %zu", highlightIndices.size());
+        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Highlight: %s (%zu parts)",
+            typeStr, highlightIndices.size());
     }
-    
+
+    // 显示最后的 AI 回复
+    std::string lastResp = embodiedAgent_.getLastResponse();
+    if (!lastResp.empty()) {
+        ImGui::TextWrapped("AI: %s", lastResp.c_str());
+    }
+
+    // 显示错误信息
+    std::string lastErr = embodiedAgent_.getLastError();
+    if (!lastErr.empty() && lastErr.find("[Error]") != std::string::npos) {
+        ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "Error: %s", lastErr.c_str());
+    }
+
     if (selectedTriangleIndex < 0) {
         ImGui::TextDisabled("No triangle selected");
-        ImGui::TextDisabled("Click on the model to pick");
     }
     
-    // 显示 AI 结果弹出窗口
-    if (ImGui::BeginPopup("AI Result")) {
-        ImGui::Text("Analysis Result");
-        ImGui::Separator();
-        ImGui::Text("Command executed successfully!");
-        ImGui::Text("Check console for detailed output.");
-        if (ImGui::Button("OK")) {
-            ImGui::CloseCurrentPopup();
+    ImGui::End();
+
+    // 具身智能 AI 聊天面板（右侧悬浮窗口）
+    ImGui::SetNextWindowPos(ImVec2(width - 340, 30), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(330, height - 40), ImGuiCond_FirstUseEver);
+    
+    ImGui::Begin("Embodied AI Chat", nullptr, ImGuiWindowFlags_NoSavedSettings);
+    
+    ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.8f, 1.0f), "Embodied AI CAD Assistant");
+    ImGui::SameLine();
+    if (embodiedAgent_.isProcessing()) {
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "[Processing...]");
+    }
+    ImGui::Separator();
+
+    // 显示已注册的工具列表
+    auto toolNames = hhb::core::LLMClient::getInstance().getRegisteredToolNames();
+    if (!toolNames.empty()) {
+        if (ImGui::CollapsingHeader("Available Tools")) {
+            for (const auto& name : toolNames) {
+                ImGui::BulletText("%s", name.c_str());
+            }
         }
-        ImGui::EndPopup();
+    }
+    
+    // 聊天历史区域
+    auto chatHistory = embodiedAgent_.getChatHistory();
+    ImGui::BeginChild("ChatHistory", ImVec2(0, -60), true);
+    for (const auto& msg : chatHistory) {
+        if (msg.isUser) {
+            ImGui::TextColored(ImVec4(0.0f, 0.8f, 1.0f, 1.0f), "[%s] You: %s",
+                msg.timestamp.c_str(), msg.content.c_str());
+        } else {
+            ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[%s] AI: %s",
+                msg.timestamp.c_str(), msg.content.c_str());
+        }
+        ImGui::Separator();
+    }
+
+    // 自动滚动到底部
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
+        ImGui::SetScrollHereY(1.0f);
+    ImGui::EndChild();
+    
+    // 输入区域
+    static char chatInputBuffer[512];
+    ImGuiInputTextFlags flags = embodiedAgent_.isProcessing() ? ImGuiInputTextFlags_ReadOnly : 0;
+    bool inputEnter = ImGui::InputText("##ChatInput", chatInputBuffer, sizeof(chatInputBuffer),
+        flags | ImGuiInputTextFlags_EnterReturnsTrue);
+    ImGui::SameLine();
+    if (ImGui::Button("Send##ChatSend", ImVec2(80, 20)) || inputEnter) {
+        std::string chatInput(chatInputBuffer);
+        if (!chatInput.empty() && !embodiedAgent_.isProcessing()) {
+            strncpy(userInputBuffer, chatInputBuffer, sizeof(userInputBuffer) - 1);
+            processUserInput();
+            memset(chatInputBuffer, 0, sizeof(chatInputBuffer));
+        }
     }
     
     ImGui::End();
@@ -1188,116 +1629,29 @@ void RenderManager::processUserInput() {
         return;
     }
     
-    // 设置控制台输出编码为 UTF-8，确保中文能正确显示
     SetConsoleOutputCP(CP_UTF8);
-    
-    std::cout << "Processing user input: " << userInput << std::endl;
-    
-    // 鲁棒性检查：确保模型已加载
+    std::cout << "[RenderManager] User input: " << userInput << std::endl;
+
+    // 优先使用具身智能 Agent 闭环处理
+    // 闭环流程：用户自然语言 -> LLM 解析为工具调用 -> C++ 执行几何分析 -> OpenGL 高亮显示
     if (!trianglePool || trianglePool->size() == 0) {
-        std::cout << "No model loaded, cannot execute geometry algorithms" << std::endl;
-        ImGui::OpenPopup("AI Result");
+        std::cout << "[RenderManager] No model loaded" << std::endl;
         return;
     }
-    
-    // 语义匹配逻辑
-    if (userInput.find("法线") != std::string::npos || userInput.find("方向") != std::string::npos || userInput.find("normal") != std::string::npos) {
-        std::cout << "Detected normal check command" << std::endl;
-        
-        // 调用 GeometryExpert 执行 check_normals
-        std::string response = geometryExpert.executeCommand(R"({"command": "check_normals"})");
-        std::cout << "GeometryExpert response: " << response << std::endl;
-        
-        // 显示结果
-        ImGui::OpenPopup("AI Result");
-    }
-    else if (userInput.find("顶点") != std::string::npos || userInput.find("冗余") != std::string::npos || userInput.find("vertex") != std::string::npos) {
-        std::cout << "Detected isolated vertices check command" << std::endl;
-        
-        // 调用 GeometryExpert 执行 check_isolated_vertices
-        std::string response = geometryExpert.executeCommand(R"({"command": "check_isolated_vertices"})");
-        std::cout << "GeometryExpert response: " << response << std::endl;
-        
-        // 显示结果
-        ImGui::OpenPopup("AI Result");
-    }
-    else if (userInput.find("信息") != std::string::npos || userInput.find("大小") != std::string::npos || userInput.find("info") != std::string::npos) {
-        std::cout << "Detected model info command" << std::endl;
-        
-        // 调用 GeometryExpert 执行 get_model_info
-        std::string response = geometryExpert.executeCommand(R"({"command": "get_model_info"})");
-        std::cout << "GeometryExpert response: " << response << std::endl;
-        
-        // 显示结果
-        ImGui::OpenPopup("AI Result");
-    }
-    else if (userInput.find("制造错误") != std::string::npos || userInput.find("inject") != std::string::npos) {
-        std::cout << "Detected fault injection command" << std::endl;
-        
-        // 调用 GeometryExpert 执行 inject_fault
-        std::string response = geometryExpert.executeCommand(R"({"command": "inject_fault"})");
-        std::cout << "GeometryExpert response: " << response << std::endl;
-        
-        // 显示结果
-        ImGui::OpenPopup("AI Result");
-    }
-    else {
-        // 原有的 LLM 逻辑
-        std::string response = llmClient.sendToolCallRequest(userInput);
-        
-        if (!response.empty()) {
-            std::cout << "LLM response received" << std::endl;
-            
-            std::vector<hhb::core::LLMClient::ToolCall> tool_calls = llmClient.parseToolCalls(response);
-            
-            if (!tool_calls.empty()) {
-                std::cout << "Tool calls found: " << tool_calls.size() << std::endl;
-                
-                for (const auto& tool_call : tool_calls) {
-                    std::cout << "Tool name: " << tool_call.name << std::endl;
-                    
-                    if (tool_call.name == "analyze_model_thickness") {
-                        float threshold_mm = 1.0f;
-                        auto it = tool_call.parameters.find("threshold_mm");
-                        if (it != tool_call.parameters.end()) {
-                            try {
-                                threshold_mm = std::stof(it->second);
-                            } catch (const std::exception& e) {
-                                std::cerr << "Failed to parse threshold_mm: " << e.what() << std::endl;
-                            }
-                        }
-                        
-                        std::cout << "Analyzing model thickness with threshold: " << threshold_mm << "mm" << std::endl;
-                        
-                        if (trianglePool) {
-                            highlightIndices.clear();
-                            
-                            std::vector<hhb::core::Triangle*> thin_parts = geometryAPI.getThinParts(threshold_mm);
-                            
-                            std::cout << "Found " << thin_parts.size() << " thin parts" << std::endl;
-                            
-                            for (const auto& thin_tri : thin_parts) {
-                                for (size_t i = 0; i < triangleCount; ++i) {
-                                    if (&(*trianglePool)[i] == thin_tri) {
-                                        highlightIndices.push_back(static_cast<int>(i));
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            currentHighlightType = HighlightType::ThinParts;
-                            showHighlight = true;
-                            lastAnalysisDesc = "薄弱部位 (厚度<" + std::to_string(static_cast<int>(threshold_mm)) + "mm)";
-                        }
-                    }
-                }
-            } else {
-                std::cout << "No tool calls found in response." << std::endl;
-            }
-        } else {
-            std::cerr << "Error: " << llmClient.getLastError() << std::endl;
-        }
-    }
+
+    // 异步调用具身智能 Agent
+    embodiedAgent_.processInputAsync(userInput);
+}
+
+void RenderManager::onToolResult(const std::vector<int>& indices, HighlightType type, const std::string& desc) {
+    // 具身智能工具执行结果回调：将分析结果映射到 OpenGL 高亮缓冲区
+    std::lock_guard<std::mutex> lock(highlightMutex);
+    newHighlightIndices = indices;
+    currentHighlightType = type;
+    lastAnalysisDesc = desc;
+    highlightCalculated = true;
+    std::cout << "[RenderManager] Tool result received: " << indices.size()
+              << " indices, desc=" << desc << std::endl;
 }
 
 void RenderManager::highlightParts() {
@@ -1305,19 +1659,26 @@ void RenderManager::highlightParts() {
         return;
     }
     
+    // 闪烁效果：使用正弦波调制透明度/亮度，周期约 0.5 秒
+    highlightBlinkTimer_ += deltaTime;
+    float blink = 0.5f + 0.5f * sinf(highlightBlinkTimer_ * 6.2831853f);
+    // 闪烁时在暗色和亮色之间切换，实现"呼吸"效果
+    float blinkAlpha = 0.6f + 0.4f * blink;
+
     GLint isSelectedLoc = glGetUniformLocation(shaderProgram, "isSelected");
     GLint highlightColorLoc = glGetUniformLocation(shaderProgram, "highlightColor");
     
-    float color[3] = {1.0f, 0.0f, 0.0f};
+    // 基础颜色：薄弱部位使用高亮红 (R:1.0, G:0.2, B:0.2)
+    float color[3] = {1.0f, 0.2f, 0.2f};
     switch (currentHighlightType) {
         case HighlightType::ThinParts:
-            color[0] = 1.0f; color[1] = 0.0f; color[2] = 0.0f; break;
+            color[0] = 1.0f * blinkAlpha; color[1] = 0.2f * blinkAlpha; color[2] = 0.2f * blinkAlpha; break;
         case HighlightType::CurvedSurfaces:
-            color[0] = 0.0f; color[1] = 1.0f; color[2] = 0.5f; break;
+            color[0] = 0.0f; color[1] = 1.0f * blinkAlpha; color[2] = 0.5f * blinkAlpha; break;
         case HighlightType::SharpEdges:
-            color[0] = 1.0f; color[1] = 0.5f; color[2] = 0.0f; break;
+            color[0] = 1.0f * blinkAlpha; color[1] = 0.5f * blinkAlpha; color[2] = 0.0f; break;
         case HighlightType::FlatSurfaces:
-            color[0] = 0.0f; color[1] = 0.5f; color[2] = 1.0f; break;
+            color[0] = 0.0f; color[1] = 0.5f * blinkAlpha; color[2] = 1.0f * blinkAlpha; break;
         default: break;
     }
     
@@ -1325,9 +1686,12 @@ void RenderManager::highlightParts() {
         glUniform1i(isSelectedLoc, GL_TRUE);
         glUniform3fv(highlightColorLoc, 1, color);
         
+        // 关闭深度写入，使高亮始终可见
+        glDepthMask(GL_FALSE);
         for (int index : highlightIndices) {
             glDrawArrays(GL_TRIANGLES, index * 3, 3);
         }
+        glDepthMask(GL_TRUE);
     }
 }
 
@@ -1336,6 +1700,367 @@ void RenderManager::shutdownImGui() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+}
+
+// 保存截图
+bool RenderManager::saveScreenshot(const std::string& filename) {
+    printf("saveScreenshot() called with: %s\n", filename.c_str());
+    fflush(stdout);
+    
+    // 创建目录（如果不存在）
+    size_t lastSlash = filename.find_last_of("\\/");
+    if (lastSlash != std::string::npos) {
+        std::string dir = filename.substr(0, lastSlash);
+        #ifdef _WIN32
+        CreateDirectoryA(dir.c_str(), NULL);
+        #else
+        mkdir(dir.c_str(), 0755);
+        #endif
+    }
+    
+    // 读取像素数据
+    std::vector<unsigned char> pixels(width * height * 3);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+    
+    // 翻转图像（因为OpenGL坐标系统与图像坐标系统不同）
+    for (int i = 0; i < height / 2; ++i) {
+        for (int j = 0; j < width * 3; ++j) {
+            std::swap(pixels[i * width * 3 + j], pixels[(height - i - 1) * width * 3 + j]);
+        }
+    }
+    
+    // 保存为PPM格式（简单的图像格式，无需外部库）
+    std::ofstream file(filename);
+    if (!file) {
+        printf("Failed to open file for writing: %s\n", filename.c_str());
+        fflush(stdout);
+        return false;
+    }
+    
+    file << "P6\n" << width << " " << height << "\n255\n";
+    file.write(reinterpret_cast<const char*>(pixels.data()), pixels.size());
+    file.close();
+    
+    printf("Screenshot saved to: %s\n", filename.c_str());
+    fflush(stdout);
+    return true;
+}
+
+// 捕获模型的三个视角
+void RenderManager::captureModelViews(const std::string& modelName) {
+    printf("captureModelViews() called for model: %s\n", modelName.c_str());
+    fflush(stdout);
+    
+    // 保存原始相机状态
+    float originalPos[3] = {cameraPosition[0], cameraPosition[1], cameraPosition[2]};
+    float originalRot[2] = {cameraRotation[0], cameraRotation[1]};
+    float originalZoom = zoom;
+    
+    // 确保模型已加载
+    if (triangleCount == 0) {
+        printf("No model loaded, cannot capture views\n");
+        fflush(stdout);
+        return;
+    }
+    
+    // 重置相机到模型中心
+    centerModel();
+    
+    // 视角1：正面
+    cameraRotation[0] = 0.0f;  // 俯仰角
+    cameraRotation[1] = 0.0f;  // 偏航角
+    zoom = 1.0f;
+    
+    // 渲染一帧
+    render();
+    swapBuffers();
+    
+    // 保存截图
+    std::string view1 = "screenshots/" + modelName + "_view1.ppm";
+    saveScreenshot(view1);
+    
+    // 视角2：侧面
+    cameraRotation[1] = 3.14159f / 2.0f;  // 90度偏航
+    
+    // 渲染一帧
+    render();
+    swapBuffers();
+    
+    // 保存截图
+    std::string view2 = "screenshots/" + modelName + "_view2.ppm";
+    saveScreenshot(view2);
+    
+    // 视角3：顶部
+    cameraRotation[0] = -3.14159f / 2.0f;  // -90度俯仰
+    cameraRotation[1] = 0.0f;
+    
+    // 渲染一帧
+    render();
+    swapBuffers();
+    
+    // 保存截图
+    std::string view3 = "screenshots/" + modelName + "_view3.ppm";
+    saveScreenshot(view3);
+    
+    // 恢复原始相机状态
+    cameraPosition[0] = originalPos[0];
+    cameraPosition[1] = originalPos[1];
+    cameraPosition[2] = originalPos[2];
+    cameraRotation[0] = originalRot[0];
+    cameraRotation[1] = originalRot[1];
+    zoom = originalZoom;
+    
+    // 调用Python脚本进行模型描述和向量存储
+    std::string apiKey = "YOUR_OPENAI_API_KEY"; // 请替换为实际的API密钥
+    std::string pythonScript = "model_describer.py";
+    std::string command = "python " + pythonScript + " " + apiKey + " " + modelName + " " + view1 + " " + view2 + " " + view3;
+    
+    printf("Executing Python script: %s\n", command.c_str());
+    fflush(stdout);
+    
+    // 执行Python脚本
+    int result = system(command.c_str());
+    if (result == 0) {
+        printf("Python script executed successfully\n");
+    } else {
+        printf("Python script execution failed with code: %d\n", result);
+    }
+    fflush(stdout);
+    
+    printf("Captured 3 views for model: %s\n", modelName.c_str());
+    fflush(stdout);
+}
+
+void RenderManager::sphericalFibonacciSample(int index, int total, float radius,
+                                              float* outX, float* outY, float* outZ) {
+    const float goldenRatio = 1.6180339887498948482f;
+    const float phi = 2.0f * 3.14159265358979323846f * index / goldenRatio;
+
+    float cosTheta = 1.0f - 2.0f * (index + 0.5f) / total;
+    float sinTheta = std::sqrt(1.0f - cosTheta * cosTheta);
+
+    *outX = radius * sinTheta * std::cos(phi);
+    *outY = radius * cosTheta;
+    *outZ = radius * sinTheta * std::sin(phi);
+}
+
+bool RenderManager::saveFrameAsPNG(const std::string& filename, int w, int h,
+                                    const std::vector<unsigned char>& pixels) {
+    std::vector<unsigned char> flipped(pixels.size());
+
+    for (int row = 0; row < h; ++row) {
+        const unsigned char* srcRow = pixels.data() + (h - 1 - row) * w * 3;
+        unsigned char* dstRow = flipped.data() + row * w * 3;
+        std::memcpy(dstRow, srcRow, w * 3);
+    }
+
+    int result = stbi_write_png(filename.c_str(), w, h, 3, flipped.data(), w * 3);
+
+    if (!result) {
+        printf("[CaptureSynthetic] Failed to save PNG: %s\n", filename.c_str());
+        fflush(stdout);
+        return false;
+    }
+
+    return true;
+}
+
+void RenderManager::computeViewMatrixFromPosition(float camX, float camY, float camZ,
+                                                   float targetX, float targetY, float targetZ,
+                                                   float* outView16) {
+    using namespace glm;
+    vec3 camPos(camX, camY, camZ);
+    vec3 target(targetX, targetY, targetZ);
+    vec3 worldUp(0.0f, 1.0f, 0.0f);
+
+    vec3 forward = normalize(target - camPos);
+    vec3 right = normalize(cross(forward, worldUp));
+
+    if (length(right) < 0.0001f) {
+        vec3 altUp(0.0f, 0.0f, 1.0f);
+        right = normalize(cross(forward, altUp));
+    }
+
+    vec3 up = cross(right, forward);
+
+    mat4 viewMat = mat4(1.0f);
+    viewMat[0][0] = right.x;   viewMat[1][0] = right.y;   viewMat[2][0] = right.z;   viewMat[3][0] = -dot(right, camPos);
+    viewMat[0][1] = up.x;      viewMat[1][1] = up.y;      viewMat[2][1] = up.z;      viewMat[3][1] = -dot(up, camPos);
+    viewMat[0][2] = -forward.x; viewMat[1][2] = -forward.y; viewMat[2][2] = -forward.z; viewMat[3][2] = dot(forward, camPos);
+    viewMat[0][3] = 0.0f;      viewMat[1][3] = 0.0f;      viewMat[2][3] = 0.0f;      viewMat[3][3] = 1.0f;
+
+    std::memcpy(outView16, value_ptr(viewMat), 16 * sizeof(float));
+}
+
+RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureConfig& config) {
+    CaptureResult result;
+    result.totalFrames = config.sampleCount;
+    result.successFrames = 0;
+    result.failedFrames = 0;
+    result.outputDirectory = config.outputDir;
+
+    printf("\n========== CaptureSyntheticData START ==========\n");
+    printf("  Sample count : %d\n", config.sampleCount);
+    printf("  Output dir   : %s\n", config.outputDir.c_str());
+    printf("  Camera radius: %.2f\n", config.cameraRadius);
+    printf("  Image size   : %dx%d\n", config.imageWidth, config.imageHeight);
+    printf("  Save mask    : %s\n", config.saveMask ? "YES" : "NO");
+    fflush(stdout);
+
+    if (triangleCount == 0) {
+        printf("[CaptureSynthetic] ERROR: No model loaded!\n");
+        fflush(stdout);
+        return result;
+    }
+
+    if (config.saveMask) {
+        computeFaceCategories();
+        updateLabelVertexData();
+    }
+
+    namespace fs = std::filesystem;
+    fs::create_directories(config.outputDir);
+    fs::create_directories(config.outputDir + "/rgb");
+    if (config.saveMask) {
+        fs::create_directories(config.outputDir + "/mask");
+    }
+
+    float origPos[3] = {cameraPosition[0], cameraPosition[1], cameraPosition[2]};
+    float origRot[2] = {cameraRotation[0], cameraRotation[1]};
+    float origZoom = zoom;
+
+    SpatialInfo info = getSpatialInfo();
+    float targetX = info.center[0];
+    float targetY = info.center[1];
+    float targetZ = info.center[2];
+
+    float origWidth = (float)width;
+    float origHeight = (float)height;
+
+    glfwSetWindowSize(window, config.imageWidth, config.imageHeight);
+    glViewport(0, 0, config.imageWidth, config.imageHeight);
+    width = config.imageWidth;
+    height = config.imageHeight;
+
+    auto timeStart = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < config.sampleCount; ++i) {
+        float camX, camY, camZ;
+        sphericalFibonacciSample(i, config.sampleCount, config.cameraRadius,
+                                  &camX, &camY, &camZ);
+
+        camX += targetX;
+        camY += targetY;
+        camZ += targetZ;
+
+        cameraPosition[0] = targetX;
+        cameraPosition[1] = targetY;
+        cameraPosition[2] = targetZ;
+
+        float dx = camX - targetX;
+        float dy = camY - targetY;
+        float dz = camZ - targetZ;
+        float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+        cameraRotation[0] = std::asin(dy / dist);
+        cameraRotation[1] = std::atan2(dx, dz);
+        zoom = 5.0f / dist;
+
+        // === Pass 1: RGB rendering (PBR shader) ===
+        render();
+        swapBuffers();
+
+        std::vector<unsigned char> rgbPixels(config.imageWidth * config.imageHeight * 3);
+        glReadPixels(0, 0, config.imageWidth, config.imageHeight,
+                     GL_RGB, GL_UNSIGNED_BYTE, rgbPixels.data());
+
+        std::ostringstream rgbOss;
+        rgbOss << config.outputDir << "/rgb/frame_"
+               << std::setfill('0') << std::setw(4) << (i + 1) << ".png";
+
+        if (saveFrameAsPNG(rgbOss.str(), config.imageWidth, config.imageHeight, rgbPixels)) {
+            result.successFrames++;
+        } else {
+            result.failedFrames++;
+        }
+
+        // === Pass 2: Mask rendering (label shader) ===
+        if (config.saveMask && labelShaderProgram) {
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
+
+            renderLabelMode();
+            swapBuffers();
+
+            std::vector<unsigned char> maskPixels(config.imageWidth * config.imageHeight * 3);
+            glReadPixels(0, 0, config.imageWidth, config.imageHeight,
+                         GL_RGB, GL_UNSIGNED_BYTE, maskPixels.data());
+
+            std::ostringstream maskOss;
+            maskOss << config.outputDir << "/mask/mask_"
+                    << std::setfill('0') << std::setw(4) << (i + 1) << ".png";
+
+            saveFrameAsPNG(maskOss.str(), config.imageWidth, config.imageHeight, maskPixels);
+
+            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        }
+
+        glfwPollEvents();
+
+        if ((i + 1) % 50 == 0 || i == 0) {
+            printf("[CaptureSynthetic] Progress: %d/%d (%.1f%%)\n",
+                   i + 1, config.sampleCount,
+                   100.0f * (i + 1) / config.sampleCount);
+            fflush(stdout);
+        }
+    }
+
+    auto timeEnd = std::chrono::steady_clock::now();
+    result.elapsedSeconds = std::chrono::duration<float>(timeEnd - timeStart).count();
+
+    cameraPosition[0] = origPos[0];
+    cameraPosition[1] = origPos[1];
+    cameraPosition[2] = origPos[2];
+    cameraRotation[0] = origRot[0];
+    cameraRotation[1] = origRot[1];
+    zoom = origZoom;
+
+    glfwSetWindowSize(window, (int)origWidth, (int)origHeight);
+    glViewport(0, 0, (int)origWidth, (int)origHeight);
+    width = (int)origWidth;
+    height = (int)origHeight;
+
+    if (config.saveMask) {
+        std::string legendPath = config.outputDir + "/label_legend.txt";
+        std::ofstream legendFile(legendPath);
+        if (legendFile.is_open()) {
+            legendFile << "# Semantic Label Color Legend\n";
+            legendFile << "# Category -> (R, G, B) in 0-255 range\n\n";
+            const char* categoryNames[] = {
+                "FreeSurface", "HorizontalPlane", "LateralPlane_X",
+                "LateralPlane_Z", "NearHorizontal", "NearLateral_X",
+                "NearLateral_Z", "Degenerate", "Reserved1", "Reserved2"
+            };
+            for (int c = 0; c < 10; ++c) {
+                float r, g, b;
+                categoryToColor(c, &r, &g, &b);
+                legendFile << c << " " << categoryNames[c] << " "
+                           << (int)(r * 255) << " " << (int)(g * 255) << " " << (int)(b * 255) << "\n";
+            }
+            legendFile.close();
+            printf("[CaptureSynthetic] Label legend saved to: %s\n", legendPath.c_str());
+        }
+    }
+
+    printf("\n========== CaptureSyntheticData COMPLETE ==========\n");
+    printf("  Total   : %d\n", result.totalFrames);
+    printf("  Success : %d\n", result.successFrames);
+    printf("  Failed  : %d\n", result.failedFrames);
+    printf("  Time    : %.2f seconds\n", result.elapsedSeconds);
+    printf("  Output  : %s\n", result.outputDirectory.c_str());
+    fflush(stdout);
+
+    return result;
 }
 
 void RenderManager::openFileDialog() {
@@ -1451,6 +2176,11 @@ void RenderManager::loadFile(const std::string& filename) {
         geometryExpert.loadModelFromPool(*trianglePool);
         std::cout << "Model loaded into GeometryExpert from shared pool" << std::endl;
         
+        // 捕获模型的三个视角
+        std::string modelName = filename.substr(filename.find_last_of("\\/") + 1);
+        modelName = modelName.substr(0, modelName.find_last_of("."));
+        captureModelViews(modelName);
+        
         printf("Model loading complete. Triangle count: %zu\n", triangleCount);
         fflush(stdout);
     } else {
@@ -1532,6 +2262,135 @@ void RenderManager::renderAABB(const hhb::core::Bounds& bounds, const float* col
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
+}
+
+void RenderManager::setTargetCameraPosition(const float pos[3], float duration) {
+    if (duration <= 0.0f) {
+        duration = 0.001f;
+    }
+
+    if (cameraAnimating) {
+        cameraPosStart[0] = cameraPosition[0];
+        cameraPosStart[1] = cameraPosition[1];
+        cameraPosStart[2] = cameraPosition[2];
+    } else {
+        memcpy(cameraPosStart, cameraPosition, sizeof(cameraPosStart));
+    }
+
+    targetCameraPos[0] = pos[0];
+    targetCameraPos[1] = pos[1];
+    targetCameraPos[2] = pos[2];
+
+    cameraAnimStart = std::chrono::steady_clock::now();
+    cameraAnimDuration = duration;
+    cameraAnimating = true;
+}
+
+void RenderManager::setTargetCameraRotation(const float rot[2], float duration) {
+    if (duration <= 0.0f) {
+        duration = 0.001f;
+    }
+
+    if (cameraAnimating) {
+        cameraRotStart[0] = cameraRotation[0];
+        cameraRotStart[1] = cameraRotation[1];
+    } else {
+        memcpy(cameraRotStart, cameraRotation, sizeof(cameraRotStart));
+    }
+
+    targetCameraRot[0] = rot[0];
+    targetCameraRot[1] = rot[1];
+
+    cameraAnimStart = std::chrono::steady_clock::now();
+    cameraAnimDuration = duration;
+    cameraAnimating = true;
+}
+
+void RenderManager::setTargetZoom(float target, float duration) {
+    if (duration <= 0.0f) {
+        duration = 0.001f;
+    }
+
+    if (cameraAnimating) {
+        zoomStart = zoom;
+    } else {
+        zoomStart = zoom;
+    }
+
+    targetZoom = target;
+
+    cameraAnimStart = std::chrono::steady_clock::now();
+    cameraAnimDuration = duration;
+    cameraAnimating = true;
+}
+
+bool RenderManager::isCameraAnimating() const {
+    return cameraAnimating;
+}
+
+void RenderManager::stopCameraAnimation() {
+    cameraAnimating = false;
+}
+
+RenderManager::SpatialInfo RenderManager::getSpatialInfo() {
+    SpatialInfo info;
+    
+    // 计算模型的几何中心和包围盒
+    if (trianglePtrs.empty()) {
+        // 模型为空，返回默认值
+        memset(info.center, 0, sizeof(info.center));
+        memset(info.bounds, 0, sizeof(info.bounds));
+    } else {
+        // 计算包围盒
+        float minX = FLT_MAX, minY = FLT_MAX, minZ = FLT_MAX;
+        float maxX = -FLT_MAX, maxY = -FLT_MAX, maxZ = -FLT_MAX;
+        
+        for (const auto& triangle : trianglePtrs) {
+            // 处理第一个顶点
+            minX = std::min(minX, triangle->vertex1[0]);
+            minY = std::min(minY, triangle->vertex1[1]);
+            minZ = std::min(minZ, triangle->vertex1[2]);
+            maxX = std::max(maxX, triangle->vertex1[0]);
+            maxY = std::max(maxY, triangle->vertex1[1]);
+            maxZ = std::max(maxZ, triangle->vertex1[2]);
+            
+            // 处理第二个顶点
+            minX = std::min(minX, triangle->vertex2[0]);
+            minY = std::min(minY, triangle->vertex2[1]);
+            minZ = std::min(minZ, triangle->vertex2[2]);
+            maxX = std::max(maxX, triangle->vertex2[0]);
+            maxY = std::max(maxY, triangle->vertex2[1]);
+            maxZ = std::max(maxZ, triangle->vertex2[2]);
+            
+            // 处理第三个顶点
+            minX = std::min(minX, triangle->vertex3[0]);
+            minY = std::min(minY, triangle->vertex3[1]);
+            minZ = std::min(minZ, triangle->vertex3[2]);
+            maxX = std::max(maxX, triangle->vertex3[0]);
+            maxY = std::max(maxY, triangle->vertex3[1]);
+            maxZ = std::max(maxZ, triangle->vertex3[2]);
+        }
+        
+        // 计算几何中心
+        info.center[0] = (minX + maxX) / 2.0f;
+        info.center[1] = (minY + maxY) / 2.0f;
+        info.center[2] = (minZ + maxZ) / 2.0f;
+        
+        // 保存包围盒信息
+        info.bounds[0] = minX;
+        info.bounds[1] = minY;
+        info.bounds[2] = minZ;
+        info.bounds[3] = maxX;
+        info.bounds[4] = maxY;
+        info.bounds[5] = maxZ;
+    }
+    
+    // 保存摄像头信息
+    memcpy(info.cameraPos, cameraPosition, sizeof(info.cameraPos));
+    memcpy(info.cameraRot, cameraRotation, sizeof(info.cameraRot));
+    info.currentZoom = zoom;
+    
+    return info;
 }
 
 } // namespace render

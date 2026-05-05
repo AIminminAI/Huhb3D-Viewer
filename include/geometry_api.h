@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <optional>
+#include <unordered_map>
 #include "stl_parser.h"
 #include "bvh.h"
 
@@ -55,6 +56,8 @@ public:
     std::vector<Triangle*> getFlatSurfaces(float flatness_threshold) const;
     
     std::vector<Triangle*> getHighCurvatureRegions(float curvature_threshold) const;
+    
+    std::unordered_map<Triangle*, int> getTriangleIndexMap() const;
     
     std::vector<Intersection> getIntersectingPoints(const Ray& ray) const;
     

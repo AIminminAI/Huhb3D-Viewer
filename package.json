@@ -1,0 +1,21 @@
+{
+  "name": "huhb-cad-ai-agent",
+  "version": "1.0.0",
+  "description": "AI agent for Huhb CAD system with speech recognition",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node agent_ui.js"
+  },
+  "dependencies": {
+    "ai": "^3.0.0",
+    "openai": "^4.0.0",
+    "deepseek": "^1.0.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "author": "Huhb",
+  "license": "MIT"
+}

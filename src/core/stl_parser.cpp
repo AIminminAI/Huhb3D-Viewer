@@ -1,3 +1,7 @@
+#ifdef _WIN32
+#define NOMINMAX
+#endif
+
 #include "stl_parser.h"
 #include <fstream>
 #include <cstring>
@@ -7,6 +11,7 @@
 #include <future>
 #include <algorithm>
 #include <chrono>
+#include <sstream>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -99,300 +104,210 @@ ParserResult StlParser::parse_binary(const std::string& filename, ObjectPool<Tri
         filename.c_str(),
         GENERIC_READ,
         FILE_SHARE_READ,
-        nullptr,
+        NULL,
         OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL,
-        nullptr
+        NULL
     );
 
     if (hFile == INVALID_HANDLE_VALUE) {
-        DWORD error = GetLastError();
-        std::cerr << "Failed to open file, error: " << error << std::endl;
+        std::cerr << "Failed to open file: " << GetLastError() << std::endl;
         result.error = "Failed to open file";
         return result;
     }
-    std::cout << "File opened successfully" << std::endl;
 
-    std::cout << "Getting file size" << std::endl;
-    DWORD fileSize = GetFileSize(hFile, nullptr);
-    if (fileSize == INVALID_FILE_SIZE) {
-        DWORD error = GetLastError();
-        std::cerr << "Failed to get file size, error: " << error << std::endl;
+    // Get file size
+    LARGE_INTEGER fileSize;
+    if (!GetFileSizeEx(hFile, &fileSize)) {
+        std::cerr << "Failed to get file size: " << GetLastError() << std::endl;
         CloseHandle(hFile);
         result.error = "Failed to get file size";
         return result;
     }
-    std::cout << "File size: " << fileSize << " bytes" << std::endl;
 
-    std::cout << "Creating file mapping" << std::endl;
-    HANDLE hMap = CreateFileMappingA(
+    // Create file mapping
+    HANDLE hMapFile = CreateFileMappingA(
         hFile,
-        nullptr,
+        NULL,
         PAGE_READONLY,
         0,
-        fileSize,
-        nullptr
+        0,
+        NULL
     );
 
-    if (hMap == nullptr) {
-        DWORD error = GetLastError();
-        std::cerr << "Failed to create file mapping, error: " << error << std::endl;
+    if (hMapFile == NULL) {
+        std::cerr << "Failed to create file mapping: " << GetLastError() << std::endl;
         CloseHandle(hFile);
         result.error = "Failed to create file mapping";
         return result;
     }
-    std::cout << "File mapping created successfully" << std::endl;
 
-    std::cout << "Mapping view of file" << std::endl;
-    const char* mappedData = reinterpret_cast<const char*>(MapViewOfFile(
-        hMap,
+    // Map view of file
+    LPVOID lpMapAddress = MapViewOfFile(
+        hMapFile,
         FILE_MAP_READ,
         0,
         0,
-        fileSize
-    ));
+        0
+    );
 
-    if (mappedData == nullptr) {
-        DWORD error = GetLastError();
-        std::cerr << "Failed to map view of file, error: " << error << std::endl;
-        CloseHandle(hMap);
+    if (lpMapAddress == NULL) {
+        std::cerr << "Failed to map view of file: " << GetLastError() << std::endl;
+        CloseHandle(hMapFile);
         CloseHandle(hFile);
         result.error = "Failed to map view of file";
         return result;
     }
-    std::cout << "File mapped successfully" << std::endl;
 
-    // Parse data
-    const char* data = mappedData + 80; // Skip 80-byte header
-    uint32_t triangle_count = *reinterpret_cast<const uint32_t*>(data);
-    std::cout << "Triangle count from file: " << triangle_count << std::endl;
-    data += 4;
+    // Process the mapped file
+    const char* data = static_cast<const char*>(lpMapAddress);
+    size_t size = static_cast<size_t>(fileSize.QuadPart);
 
-    // Verify file size is sufficient
-    size_t expected_size = 80 + 4 + triangle_count * 50;
-    if (fileSize < expected_size) {
-        std::cerr << "File size is smaller than expected: " << fileSize << " < " << expected_size << std::endl;
-        UnmapViewOfFile(mappedData);
-        CloseHandle(hMap);
-        CloseHandle(hFile);
-        result.error = "File size is smaller than expected";
-        return result;
-    }
+    // Skip 80-byte header
+    size_t offset = 80;
 
-    // Start timing for the actual parsing (zero-copy)
-    auto parsing_start = std::chrono::high_resolution_clock::now();
+    // Read triangle count
+    uint32_t triangle_count;
+    memcpy(&triangle_count, data + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
 
-    // Multi-threaded zero-copy parsing
-    const int NUM_THREADS = 4;
-    size_t parsed_count = 0;
+    std::cout << "Binary STL: Found " << triangle_count << " triangles" << std::endl;
+
+    // Process triangles in parallel
+    const size_t batch_size = 10000;
+    const size_t num_batches = (triangle_count + batch_size - 1) / batch_size;
     std::vector<std::future<size_t>> futures;
-    
-    // Calculate workload per thread
-    size_t triangles_per_thread = triangle_count / NUM_THREADS;
-    size_t remaining_triangles = triangle_count % NUM_THREADS;
-    
-    std::cout << "Starting multi-threaded zero-copy parsing with " << NUM_THREADS << " threads" << std::endl;
-    std::cout << "Triangles per thread: " << triangles_per_thread << std::endl;
-    std::cout << "Remaining triangles: " << remaining_triangles << std::endl;
-    
-    // Create threads
-    for (int i = 0; i < NUM_THREADS; ++i) {
-        size_t start_idx = i * triangles_per_thread;
-        size_t end_idx = start_idx + triangles_per_thread;
-        
-        // Handle remaining triangles
-        if (i == NUM_THREADS - 1) {
-            end_idx += remaining_triangles;
-        }
-        
-        // Calculate thread's start data pointer
-        const char* thread_data = data + start_idx * 50;
-        
-        // Create thread task
-        futures.push_back(std::async(std::launch::async, [&pool, thread_data, start_idx, end_idx]() -> size_t {
-            size_t thread_parsed = 0;
-            const char* current_data = thread_data;
-            
-            for (size_t j = start_idx; j < end_idx; ++j) {
-                try {
-                    Triangle* tri = pool.allocate();
-                    if (!tri) {
-                        std::cerr << "Failed to allocate triangle" << std::endl;
-                        break;
-                    }
-                    
-                    // Zero-copy: Directly cast and copy the 50-byte triangle data
-                    // This avoids individual field copying and improves performance
-                    memcpy(tri, current_data, 50); // Each triangle is fixed 50 bytes in binary STL
-                    current_data += 50;
-                    thread_parsed++;
-                    
-                    // Output progress every 10000 triangles
-                    if (thread_parsed % 10000 == 0) {
-                        std::cout << "Thread " << std::this_thread::get_id() << " parsed " << thread_parsed << " triangles..." << std::endl;
-                    }
-                } catch (const std::exception& e) {
-                    std::cerr << "Exception during parsing triangle " << j << ": " << e.what() << std::endl;
-                    break;
-                }
+
+    for (size_t batch = 0; batch < num_batches; ++batch) {
+        size_t start = batch * batch_size;
+        size_t end = std::min(start + batch_size, static_cast<size_t>(triangle_count));
+
+        futures.push_back(std::async(std::launch::async, [&, start, end]() {
+            size_t local_count = 0;
+            for (size_t i = start; i < end; ++i) {
+                Triangle tri;
+                size_t triangle_offset = offset + i * 50;
+                
+                // Read normal
+                memcpy(tri.normal, data + triangle_offset, 12);
+                
+                // Read vertices
+                memcpy(tri.vertex1, data + triangle_offset + 12, 12);
+                memcpy(tri.vertex2, data + triangle_offset + 24, 12);
+                memcpy(tri.vertex3, data + triangle_offset + 36, 12);
+                
+                // Read attribute count
+                memcpy(&tri.attribute_count, data + triangle_offset + 48, 2);
+                
+                // Add to pool
+                Triangle* tri_ptr = pool.allocate();
+                new (tri_ptr) Triangle(tri);
+                local_count++;
             }
-            
-            std::cout << "Thread " << std::this_thread::get_id() << " finished, parsed " << thread_parsed << " triangles" << std::endl;
-            return thread_parsed;
+            return local_count;
         }));
     }
-    
-    // Wait for all threads to complete and sum results
-    for (auto& future : futures) {
-        parsed_count += future.get();
-    }
-    
-    // End timing for parsing
-    auto parsing_end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::micro> parsing_duration = parsing_end - parsing_start;
-    std::cout << "Zero-copy parsing completed in " << parsing_duration.count() << " microseconds" << std::endl;
 
-    // Cleanup
-    std::cout << "Unmapping file" << std::endl;
-    UnmapViewOfFile(mappedData);
-    std::cout << "Closing file mapping" << std::endl;
-    CloseHandle(hMap);
-    std::cout << "Closing file" << std::endl;
+    // Collect results
+    size_t total_triangles = 0;
+    for (auto& future : futures) {
+        total_triangles += future.get();
+    }
+
+    // Unmap view and close handles
+    UnmapViewOfFile(lpMapAddress);
+    CloseHandle(hMapFile);
     CloseHandle(hFile);
 
-    // End timing for entire process
-    auto total_end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::micro> total_duration = total_end - total_start;
-    std::cout << "Total parsing process completed in " << total_duration.count() << " microseconds" << std::endl;
-
-    result.success = true;
-    result.count = parsed_count;
-    std::cout << "Binary STL parsing completed, " << parsed_count << " triangles parsed" << std::endl;
-    return result;
 #else
-    // Linux memory mapping
+    // POSIX memory mapping
     int fd = open(filename.c_str(), O_RDONLY);
     if (fd == -1) {
+        std::cerr << "Failed to open file: " << strerror(errno) << std::endl;
         result.error = "Failed to open file";
         return result;
     }
 
     struct stat sb;
     if (fstat(fd, &sb) == -1) {
+        std::cerr << "Failed to get file size: " << strerror(errno) << std::endl;
         close(fd);
         result.error = "Failed to get file size";
         return result;
     }
 
-    const char* mappedData = reinterpret_cast<const char*>(mmap(
-        nullptr,
-        sb.st_size,
-        PROT_READ,
-        MAP_PRIVATE,
-        fd,
-        0
-    ));
-
-    if (mappedData == MAP_FAILED) {
+    size_t size = sb.st_size;
+    char* data = static_cast<char*>(mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0));
+    if (data == MAP_FAILED) {
+        std::cerr << "Failed to map file: " << strerror(errno) << std::endl;
         close(fd);
         result.error = "Failed to map file";
         return result;
     }
 
-    // Parse data
-    const char* data = mappedData + 80; // Skip 80-byte header
-    uint32_t triangle_count = *reinterpret_cast<const uint32_t*>(data);
-    data += 4;
+    // Process the mapped file
+    size_t offset = 80;
+    uint32_t triangle_count;
+    memcpy(&triangle_count, data + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
 
-    // Verify file size is sufficient
-    size_t expected_size = 80 + 4 + triangle_count * 50;
-    if (sb.st_size < expected_size) {
-        std::cerr << "File size is smaller than expected: " << sb.st_size << " < " << expected_size << std::endl;
-        munmap(const_cast<char*>(mappedData), sb.st_size);
-        close(fd);
-        result.error = "File size is smaller than expected";
-        return result;
-    }
+    std::cout << "Binary STL: Found " << triangle_count << " triangles" << std::endl;
 
-    // Multi-threaded parsing
-    const int NUM_THREADS = 4;
-    size_t parsed_count = 0;
+    // Process triangles in parallel
+    const size_t batch_size = 10000;
+    const size_t num_batches = (triangle_count + batch_size - 1) / batch_size;
     std::vector<std::future<size_t>> futures;
-    
-    // Calculate workload per thread
-    size_t triangles_per_thread = triangle_count / NUM_THREADS;
-    size_t remaining_triangles = triangle_count % NUM_THREADS;
-    
-    std::cout << "Starting multi-threaded parsing with " << NUM_THREADS << " threads" << std::endl;
-    std::cout << "Triangles per thread: " << triangles_per_thread << std::endl;
-    std::cout << "Remaining triangles: " << remaining_triangles << std::endl;
-    
-    // Start timing
-    auto thread_start = std::chrono::high_resolution_clock::now();
-    
-    // Create threads
-    for (int i = 0; i < NUM_THREADS; ++i) {
-        size_t start_idx = i * triangles_per_thread;
-        size_t end_idx = start_idx + triangles_per_thread;
-        
-        // Handle remaining triangles
-        if (i == NUM_THREADS - 1) {
-            end_idx += remaining_triangles;
-        }
-        
-        // Calculate thread's start data pointer
-        const char* thread_data = data + start_idx * 50;
-        
-        // Create thread task
-        futures.push_back(std::async(std::launch::async, [&pool, thread_data, start_idx, end_idx]() -> size_t {
-            size_t thread_parsed = 0;
-            const char* current_data = thread_data;
-            
-            for (size_t j = start_idx; j < end_idx; ++j) {
-                try {
-                    Triangle* tri = pool.allocate();
-                    if (!tri) {
-                        std::cerr << "Failed to allocate triangle" << std::endl;
-                        break;
-                    }
-                    // Safe data copy
-                    memcpy(tri, current_data, sizeof(Triangle));
-                    current_data += 50; // Each triangle is fixed 50 bytes in binary STL
-                    thread_parsed++;
-                    
-                    // Output progress every 10000 triangles
-                    if (thread_parsed % 10000 == 0) {
-                        std::cout << "Thread " << std::this_thread::get_id() << " parsed " << thread_parsed << " triangles..." << std::endl;
-                    }
-                } catch (const std::exception& e) {
-                    std::cerr << "Exception during parsing triangle " << j << ": " << e.what() << std::endl;
-                    break;
-                }
+
+    for (size_t batch = 0; batch < num_batches; ++batch) {
+        size_t start = batch * batch_size;
+        size_t end = std::min(start + batch_size, static_cast<size_t>(triangle_count));
+
+        futures.push_back(std::async(std::launch::async, [&, start, end]() {
+            size_t local_count = 0;
+            for (size_t i = start; i < end; ++i) {
+                Triangle tri;
+                size_t triangle_offset = offset + i * 50;
+                
+                // Read normal
+                memcpy(tri.normal, data + triangle_offset, 12);
+                
+                // Read vertices
+                memcpy(tri.vertex1, data + triangle_offset + 12, 12);
+                memcpy(tri.vertex2, data + triangle_offset + 24, 12);
+                memcpy(tri.vertex3, data + triangle_offset + 36, 12);
+                
+                // Read attribute count
+                memcpy(&tri.attribute_count, data + triangle_offset + 48, 2);
+                
+                // Add to pool
+                Triangle* tri_ptr = pool.allocate();
+                new (tri_ptr) Triangle(tri);
+                local_count++;
             }
-            
-            std::cout << "Thread " << std::this_thread::get_id() << " finished, parsed " << thread_parsed << " triangles" << std::endl;
-            return thread_parsed;
+            return local_count;
         }));
     }
-    
-    // Wait for all threads to complete and sum results
-    for (auto& future : futures) {
-        parsed_count += future.get();
-    }
-    
-    // End timing
-    auto thread_end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> thread_duration = thread_end - thread_start;
-    std::cout << "Multi-threaded parsing completed in " << thread_duration.count() << " ms" << std::endl;
 
-    // Cleanup
-    munmap(const_cast<char*>(mappedData), sb.st_size);
+    // Collect results
+    size_t total_triangles = 0;
+    for (auto& future : futures) {
+        total_triangles += future.get();
+    }
+
+    // Unmap and close
+    munmap(data, size);
     close(fd);
+#endif
+
+    // End timing
+    auto total_end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> total_duration = total_end - total_start;
 
     result.success = true;
-    result.count = parsed_count;
+    result.count = total_triangles;
+    std::cout << "Binary STL parsing completed, " << total_triangles << " triangles parsed" << std::endl;
+    std::cout << "Total parsing time: " << total_duration.count() << " ms" << std::endl;
     return result;
-#endif
 }
 
 // Parse ASCII STL file
@@ -402,63 +317,94 @@ ParserResult StlParser::parse_ascii(const std::string& filename, ObjectPool<Tria
     result.success = false;
     result.count = 0;
 
-    std::ifstream file(filename);
-    if (!file) {
-        result.error = "Failed to open file";
-        return result;
-    }
+    auto start = std::chrono::high_resolution_clock::now();
 
-    std::string line;
-    size_t parsed_count = 0;
-
-    // Skip file header
-    while (std::getline(file, line)) {
-        if (line.find("solid") != std::string::npos) {
-            break;
+    try {
+        std::ifstream file(filename);
+        if (!file) {
+            result.error = "Failed to open file";
+            return result;
         }
-    }
 
-    // Parse triangles
-    while (file) {
-        // Find facet start
+        std::string line;
+        size_t parsed_count = 0;
+
         while (std::getline(file, line)) {
-            if (line.find("facet normal") != std::string::npos) {
-                break;
+            // Trim whitespace
+            line.erase(0, line.find_first_not_of(" \t\r\n"));
+            line.erase(line.find_last_not_of(" \t\r\n") + 1);
+
+            if (line.empty()) continue;
+
+            // Check for 'solid' keyword (start of file)
+            if (line.substr(0, 5) == "solid") {
+                // Found solid, start parsing triangles
+                while (std::getline(file, line)) {
+                    // Trim whitespace
+                    line.erase(0, line.find_first_not_of(" \t\r\n"));
+                    line.erase(line.find_last_not_of(" \t\r\n") + 1);
+
+                    if (line.empty()) continue;
+
+                    // Check for 'endsolid' keyword (end of file)
+                    if (line.substr(0, 8) == "endsolid") {
+                        break;
+                    }
+
+                    // Check for 'facet normal' keyword (start of triangle)
+                    if (line.substr(0, 12) == "facet normal") {
+                        Triangle tri;
+                        
+                        // Read normal
+                        std::istringstream iss(line.substr(12));
+                        iss >> tri.normal[0] >> tri.normal[1] >> tri.normal[2];
+
+                        // Read 'outer loop'
+                        std::getline(file, line);
+                        line.erase(0, line.find_first_not_of(" \t\r\n"));
+
+                        // Read three vertices
+                        for (int i = 0; i < 3; ++i) {
+                            std::getline(file, line);
+                            line.erase(0, line.find_first_not_of(" \t\r\n"));
+                            
+                            if (line.substr(0, 6) == "vertex") {
+                                std::istringstream viss(line.substr(6));
+                                if (i == 0) {
+                                    viss >> tri.vertex1[0] >> tri.vertex1[1] >> tri.vertex1[2];
+                                } else if (i == 1) {
+                                    viss >> tri.vertex2[0] >> tri.vertex2[1] >> tri.vertex2[2];
+                                } else if (i == 2) {
+                                    viss >> tri.vertex3[0] >> tri.vertex3[1] >> tri.vertex3[2];
+                                }
+                            }
+                        }
+
+                        // Read 'endloop' and 'endfacet'
+                        std::getline(file, line); // endloop
+                        std::getline(file, line); // endfacet
+
+                        // Add to pool
+                        Triangle* tri_ptr = pool.allocate();
+                        new (tri_ptr) Triangle(tri);
+                        parsed_count++;
+                    }
+                }
             }
         }
 
-        if (!file) {
-            break;
-        }
-
-        // Parse normal vector
-        Triangle* tri = pool.allocate();
-        sscanf(line.c_str(), "facet normal %f %f %f", &tri->normal[0], &tri->normal[1], &tri->normal[2]);
-
-        // Skip outer loop
-        std::getline(file, line);
-
-        // Parse three vertices
-        std::getline(file, line);
-        sscanf(line.c_str(), "vertex %f %f %f", &tri->vertex1[0], &tri->vertex1[1], &tri->vertex1[2]);
-
-        std::getline(file, line);
-        sscanf(line.c_str(), "vertex %f %f %f", &tri->vertex2[0], &tri->vertex2[1], &tri->vertex2[2]);
-
-        std::getline(file, line);
-        sscanf(line.c_str(), "vertex %f %f %f", &tri->vertex3[0], &tri->vertex3[1], &tri->vertex3[2]);
-
-        // Skip endloop and endfacet
-        std::getline(file, line);
-        std::getline(file, line);
-
-        tri->attribute_count = 0;
-        parsed_count++;
+        result.success = true;
+        result.count = parsed_count;
+        std::cout << "ASCII STL parsing completed, " << parsed_count << " triangles parsed" << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "Exception during ASCII parsing: " << e.what() << std::endl;
+        result.error = std::string("Exception during parsing: ") + e.what();
     }
 
-    result.success = true;
-    result.count = parsed_count;
-    std::cout << "ASCII STL parsing completed, " << parsed_count << " triangles parsed" << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "ASCII parsing time: " << duration.count() << " ms" << std::endl;
+
     return result;
 }
 

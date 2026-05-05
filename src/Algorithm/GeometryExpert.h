@@ -5,6 +5,7 @@
 #include <map>
 #include "stl_parser.h"
 #include "geometry_api.h"
+#include "AICommandManager.h"
 
 namespace hhb {
 namespace algorithm {

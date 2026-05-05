@@ -154,6 +154,59 @@ std::string GeometryExpert::executeCommand(const std::string& jsonCommand) {
             std::cout << "[Debug] 故障注入完成" << std::endl;
             return generateJsonResponse(true, "Fault injected successfully", data.str());
         }
+        else if (command == "chat") {
+            std::cout << "[Debug] 处理聊天命令" << std::endl;
+            
+            // 获取消息内容
+            std::string message = params["message"];
+            std::cout << "[Debug] 接收到消息: " << message << std::endl;
+            
+            // 简单的命令匹配
+            if (message.find("load") != std::string::npos && message.find("model") != std::string::npos) {
+                // 提取文件名
+                size_t start = message.find(" ");
+                if (start != std::string::npos) {
+                    std::string filename = message.substr(start + 1);
+                    // 调用 AICommandManager 加载模型
+                    hhb::algorithm::AICommandManager::getInstance().loadModel(filename);
+                    return "Model loading initiated: " + filename;
+                }
+            }
+            else if (message.find("reset") != std::string::npos && message.find("camera") != std::string::npos) {
+                // 重置相机
+                hhb::algorithm::AICommandManager::getInstance().resetCamera();
+                return "Camera reset to default position";
+            }
+            else if (message.find("zoom") != std::string::npos) {
+                // 提取缩放值
+                size_t start = message.find(" ");
+                if (start != std::string::npos) {
+                    std::string zoomStr = message.substr(start + 1);
+                    float zoom = std::stof(zoomStr);
+                    hhb::algorithm::AICommandManager::getInstance().setZoom(zoom);
+                    return "Zoom set to: " + zoomStr;
+                }
+            }
+            else if (message.find("highlight") != std::string::npos) {
+                // 高亮处理
+                hhb::algorithm::AICommandManager::getInstance().setHighlight(1, {});
+                return "Highlight initiated";
+            }
+            else if (message.find("clear") != std::string::npos && message.find("highlight") != std::string::npos) {
+                // 清除高亮
+                hhb::algorithm::AICommandManager::getInstance().clearHighlight();
+                return "Highlight cleared";
+            }
+            else if (message.find("analyze") != std::string::npos || message.find("analysis") != std::string::npos) {
+                // 执行分析
+                hhb::algorithm::AICommandManager::getInstance().executeAnalysis(message);
+                return "Analysis initiated: " + message;
+            }
+            else {
+                // 普通聊天回复
+                return "Hello! I'm your CAD assistant. How can I help you with your 3D model today?";
+            }
+        }
         else {
             return generateJsonResponse(false, "Unknown command: " + command);
         }

@@ -1,0 +1,8 @@
+{
+  "version": "1.0",
+  "generator": "Huhb3D-SyntheticDataPipeline",
+  "rgb_count": 100,
+  "mask_count": 100,
+  "has_legend": true,
+  "has_ai_description": false
+}

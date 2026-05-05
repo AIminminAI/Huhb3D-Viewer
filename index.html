@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI CAD Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .chat-container {
+            width: 300px;
+            height: 500px;
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 10px 10px 0 0;
+            text-align: center;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 18px;
+            max-width: 80%;
+        }
+        .user-message {
+            background-color: #DCF8C6;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .ai-message {
+            background-color: #F1F0F0;
+            align-self: flex-start;
+        }
+        .chat-input {
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+        .chat-input button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .chat-input button:hover {
+            background-color: #45a049;
+        }
+        .speech-button {
+            background-color: #2196F3;
+        }
+        .speech-button:hover {
+            background-color: #0b7dda;
+        }
+        .loading {
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h3>AI CAD Assistant</h3>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="message ai-message">
+                你好！我是你的 AI CAD 助手。请说出或输入你的指令。
+            </div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="chat-input" placeholder="输入指令..." />
+            <button id="send-button">发送</button>
+            <button id="speech-button" class="speech-button" title="语音输入">🎤</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM 元素
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        const speechButton = document.getElementById('speech-button');
+
+        // 语音识别
+        let recognition = null;
+        let isListening = false;
+
+        // 初始化语音识别
+        function initSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'zh-CN';
+
+                recognition.onstart = function() {
+                    isListening = true;
+                    speechButton.textContent = '🔴';
+                    addMessage('ai', '正在听...');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    chatInput.value = transcript;
+                    addMessage('user', transcript);
+                    sendMessage(transcript);
+                };
+
+                recognition.onerror = function(event) {
+                    console.error('语音识别错误:', event.error);
+                    addMessage('ai', '语音识别失败，请重试');
+                    speechButton.textContent = '🎤';
+                    isListening = false;
+                };
+
+                recognition.onend = function() {
+                    speechButton.textContent = '🎤';
+                    isListening = false;
+                };
+            } else {
+                addMessage('ai', '你的浏览器不支持语音识别');
+                speechButton.disabled = true;
+            }
+        }
+
+        // 语音合成
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 添加消息到聊天框
+        function addMessage(type, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 发送消息
+        async function sendMessage(text) {
+            if (!text.trim()) return;
+
+            try {
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: text })
+                });
+
+                const result = await response.json();
+                if (result.response) {
+                    addMessage('ai', result.response);
+                    // 语音合成回复
+                    speakText(result.response);
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                addMessage('ai', '抱歉，发送消息失败，请重试');
+            }
+
+            // 清空输入框
+            chatInput.value = '';
+        }
+
+        // 事件监听
+        sendButton.addEventListener('click', function() {
+            const text = chatInput.value;
+            if (text.trim()) {
+                addMessage('user', text);
+                sendMessage(text);
+            }
+        });
+
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const text = chatInput.value;
+                if (text.trim()) {
+                    addMessage('user', text);
+                    sendMessage(text);
+                }
+            }
+        });
+
+        speechButton.addEventListener('click', function() {
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        });
+
+        // 初始化
+        initSpeechRecognition();
+    </script>
+</body>
+</html>

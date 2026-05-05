@@ -4,6 +4,7 @@ graph TD
     C --> D[生成 1000 张 RGB 图像]
     C --> E[生成 1000 张 语义 Mask]
     D & E --> F[打包为 .zip 交付物]
+    
 
 # Huhb3D Synthetic Data Generator (具身智能合成数据生成器)
 

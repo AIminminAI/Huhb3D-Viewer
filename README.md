@@ -1,11 +1,3 @@
-graph TD
-    A[CAD模型: .stl/.obj] --> B[C++ 渲染引擎]
-    B --> C{BVH 加速算法}
-    C --> D[生成 1000 张 RGB 图像]
-    C --> E[生成 1000 张 语义 Mask]
-    D & E --> F[打包为 .zip 交付物]
-    
-
 # Huhb3D Synthetic Data Generator (具身智能合成数据生成器)
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
@@ -25,11 +17,23 @@ Huhb3D Synthetic Data Generator 是一个**面向具身智能/机器人视觉训
 
 **典型用户**：做机器人视觉的公司/研究者，需要大量"带标注的 3D 数据"来训练 AI 模型。
 
+graph TD
+    A[CAD模型: .stl/.obj] --> B[C++ 渲染引擎]
+    B --> C{BVH 加速算法}
+    C --> D[生成 1000 张 RGB 图像]
+    C --> E[生成 1000 张 语义 Mask]
+    D & E --> F[打包为 .zip 交付物]
+    
+
 ## 📸 运行效果
 
 ![渲染效果](docs/images/stl效果图.png)
 
 ![AI交互演示](docs/images/HuhbViewer.gif)
+
+![RGB 样例](mask_0034.png)
+
+![Mask 样例](mask_0034.png)
 
 ## ✨ 核心特性
 

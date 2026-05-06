@@ -218,6 +218,14 @@ private:
     void setLabelMode(bool active);
     static void categoryToColor(int categoryId, float* outR, float* outG, float* outB);
 
+    void computeCurvature();
+    void computeGeometricFeatures();
+    std::vector<int> faceCurvatureIds;
+    std::vector<float> faceGaussianCurvature;
+    std::vector<float> faceMeanCurvature;
+    bool curvatureComputed = false;
+    bool geometricFeaturesComputed = false;
+
     void renderBVH();
     void renderAABB(const hhb::core::Bounds& bounds, const float* color);
 };

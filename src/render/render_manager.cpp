@@ -9,6 +9,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <fstream>
 
 #include <glad/glad.h>
@@ -914,6 +915,8 @@ void RenderManager::categoryToColor(int categoryId, float* outR, float* outG, fl
         case 7:  *outR = 1.00f; *outG = 0.50f; *outB = 0.00f; break;
         case 8:  *outR = 0.50f; *outG = 0.00f; *outB = 1.00f; break;
         case 9:  *outR = 0.00f; *outG = 0.50f; *outB = 1.00f; break;
+        case 10: *outR = 0.80f; *outG = 0.80f; *outB = 0.00f; break;
+        case 11: *outR = 0.00f; *outG = 0.80f; *outB = 0.40f; break;
         default: *outR = 1.00f; *outG = 1.00f; *outB = 1.00f; break;
     }
 }
@@ -982,6 +985,385 @@ void RenderManager::computeFaceCategories() {
 
     faceCategoriesComputed = true;
     printf("[LabelMode] Face categories computed: %zu triangles classified\n", faceCategoryIds.size());
+    fflush(stdout);
+}
+
+void RenderManager::computeCurvature() {
+    if (!trianglePool || triangleCount == 0) {
+        faceGaussianCurvature.clear();
+        faceMeanCurvature.clear();
+        faceCurvatureIds.clear();
+        curvatureComputed = false;
+        return;
+    }
+
+    faceGaussianCurvature.resize(triangleCount, 0.0f);
+    faceMeanCurvature.resize(triangleCount, 0.0f);
+    faceCurvatureIds.resize(triangleCount, 0);
+
+    struct VertexInfo {
+        float normal[3] = {0, 0, 0};
+        float areaSum = 0.0f;
+        int valence = 0;
+        float pos[3] = {0, 0, 0};
+    };
+
+    std::unordered_map<int64_t, VertexInfo> vertexMap;
+
+    auto vertexKey = [](float x, float y, float z) -> int64_t {
+        int ix = (int)(x * 10000.0f);
+        int iy = (int)(y * 10000.0f);
+        int iz = (int)(z * 10000.0f);
+        return ((int64_t)(ix & 0xFFFFF) << 40) | ((int64_t)(iy & 0xFFFFF) << 20) | (int64_t)(iz & 0xFFFFF);
+    };
+
+    trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        float e1[3] = {tri->vertex2[0] - tri->vertex1[0],
+                        tri->vertex2[1] - tri->vertex1[1],
+                        tri->vertex2[2] - tri->vertex1[2]};
+        float e2[3] = {tri->vertex3[0] - tri->vertex1[0],
+                        tri->vertex3[1] - tri->vertex1[1],
+                        tri->vertex3[2] - tri->vertex1[2]};
+        float cross[3] = {
+            e1[1] * e2[2] - e1[2] * e2[1],
+            e1[2] * e2[0] - e1[0] * e2[2],
+            e1[0] * e2[1] - e1[1] * e2[0]
+        };
+        float area = 0.5f * std::sqrt(cross[0]*cross[0] + cross[1]*cross[1] + cross[2]*cross[2]);
+
+        float nx = tri->normal[0], ny = tri->normal[1], nz = tri->normal[2];
+        float nLen = std::sqrt(nx*nx + ny*ny + nz*nz);
+        if (nLen > 0.0001f) { nx /= nLen; ny /= nLen; nz /= nLen; }
+
+        int64_t keys[3] = {
+            vertexKey(tri->vertex1[0], tri->vertex1[1], tri->vertex1[2]),
+            vertexKey(tri->vertex2[0], tri->vertex2[1], tri->vertex2[2]),
+            vertexKey(tri->vertex3[0], tri->vertex3[1], tri->vertex3[2])
+        };
+
+        float (*verts)[3] = {&tri->vertex1[0], &tri->vertex2[0], &tri->vertex3[0]};
+
+        for (int v = 0; v < 3; ++v) {
+            auto& info = vertexMap[keys[v]];
+            info.normal[0] += nx * area;
+            info.normal[1] += ny * area;
+            info.normal[2] += nz * area;
+            info.areaSum += area;
+            info.valence++;
+            info.pos[0] = verts[v][0];
+            info.pos[1] = verts[v][1];
+            info.pos[2] = verts[v][2];
+        }
+    });
+
+    for (auto& [key, info] : vertexMap) {
+        if (info.areaSum > 0.00001f) {
+            info.normal[0] /= info.areaSum;
+            info.normal[1] /= info.areaSum;
+            info.normal[2] /= info.areaSum;
+            float nLen = std::sqrt(info.normal[0]*info.normal[0] +
+                                    info.normal[1]*info.normal[1] +
+                                    info.normal[2]*info.normal[2]);
+            if (nLen > 0.0001f) {
+                info.normal[0] /= nLen;
+                info.normal[1] /= nLen;
+                info.normal[2] /= nLen;
+            }
+        }
+    }
+
+    size_t idx = 0;
+    trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        if (idx >= triangleCount) return;
+
+        int64_t keys[3] = {
+            vertexKey(tri->vertex1[0], tri->vertex1[1], tri->vertex1[2]),
+            vertexKey(tri->vertex2[0], tri->vertex2[1], tri->vertex2[2]),
+            vertexKey(tri->vertex3[0], tri->vertex3[1], tri->vertex3[2])
+        };
+
+        float e1[3] = {tri->vertex2[0] - tri->vertex1[0],
+                        tri->vertex2[1] - tri->vertex1[1],
+                        tri->vertex2[2] - tri->vertex1[2]};
+        float e2[3] = {tri->vertex3[0] - tri->vertex1[0],
+                        tri->vertex3[1] - tri->vertex1[1],
+                        tri->vertex3[2] - tri->vertex1[2]};
+        float cross[3] = {
+            e1[1] * e2[2] - e1[2] * e2[1],
+            e1[2] * e2[0] - e1[0] * e2[2],
+            e1[0] * e2[1] - e1[1] * e2[0]
+        };
+        float area = 0.5f * std::sqrt(cross[0]*cross[0] + cross[1]*cross[1] + cross[2]*cross[2]);
+
+        float meanCurv = 0.0f;
+
+        if (area > 0.00001f) {
+            for (int v = 0; v < 3; ++v) {
+                auto it = vertexMap.find(keys[v]);
+                if (it != vertexMap.end()) {
+                    float dx = it->second.pos[0] - tri->vertex1[0];
+                    float dy = it->second.pos[1] - tri->vertex1[1];
+                    float dz = it->second.pos[2] - tri->vertex1[2];
+                    float dist = std::sqrt(dx*dx + dy*dy + dz*dz);
+
+                    float dotProd = it->second.normal[0] * tri->normal[0] +
+                                    it->second.normal[1] * tri->normal[1] +
+                                    it->second.normal[2] * tri->normal[2];
+                    float angle = std::acos(std::max(-1.0f, std::min(1.0f, dotProd)));
+                    meanCurv += angle / dist;
+                }
+            }
+            meanCurv /= (3.0f * area);
+        }
+
+        float gaussianCurv = 0.0f;
+        if (area > 0.00001f) {
+            float angleSum = 0.0f;
+            for (int v = 0; v < 3; ++v) {
+                auto it = vertexMap.find(keys[v]);
+                if (it != vertexMap.end() && it->second.valence > 0) {
+                    angleSum += 2.0f * 3.14159265f / it->second.valence;
+                }
+            }
+            gaussianCurv = (angleSum - 3.14159265f) / area;
+        }
+
+        faceMeanCurvature[idx] = meanCurv;
+        faceGaussianCurvature[idx] = gaussianCurv;
+
+        float absMean = std::abs(meanCurv);
+        float absGauss = std::abs(gaussianCurv);
+
+        if (absMean < 0.5f && absGauss < 0.5f) {
+            faceCurvatureIds[idx] = 0;
+        } else if (absGauss > 2.0f && gaussianCurv > 0) {
+            faceCurvatureIds[idx] = 1;
+        } else if (absGauss > 2.0f && gaussianCurv < 0) {
+            faceCurvatureIds[idx] = 2;
+        } else if (absMean > 1.0f && meanCurv > 0) {
+            faceCurvatureIds[idx] = 3;
+        } else if (absMean > 1.0f && meanCurv < 0) {
+            faceCurvatureIds[idx] = 4;
+        } else {
+            faceCurvatureIds[idx] = 5;
+        }
+
+        idx++;
+    });
+
+    curvatureComputed = true;
+    printf("[Curvature] Computed for %zu triangles\n", faceMeanCurvature.size());
+    fflush(stdout);
+}
+
+void RenderManager::computeGeometricFeatures() {
+    if (!curvatureComputed) {
+        computeCurvature();
+    }
+
+    if (!trianglePool || triangleCount == 0) {
+        geometricFeaturesComputed = false;
+        return;
+    }
+
+    faceCategoryIds.resize(triangleCount, 0);
+
+    struct EdgeKey {
+        int64_t v0, v1;
+        bool operator==(const EdgeKey& o) const { return v0 == o.v0 && v1 == o.v1; }
+    };
+    struct EdgeKeyHash {
+        size_t operator()(const EdgeKey& k) const { return std::hash<int64_t>()(k.v0) ^ (std::hash<int64_t>()(k.v1) << 1); }
+    };
+
+    auto vertexKey = [](float x, float y, float z) -> int64_t {
+        int ix = (int)(x * 10000.0f);
+        int iy = (int)(y * 10000.0f);
+        int iz = (int)(z * 10000.0f);
+        return ((int64_t)(ix & 0xFFFFF) << 40) | ((int64_t)(iy & 0xFFFFF) << 20) | (int64_t)(iz & 0xFFFFF);
+    };
+
+    auto makeEdge = [](int64_t a, int64_t b) -> EdgeKey {
+        return a < b ? EdgeKey{a, b} : EdgeKey{b, a};
+    };
+
+    std::unordered_map<EdgeKey, std::vector<int>, EdgeKeyHash> edgeToTriangles;
+    std::vector<int64_t> triVertexKeys(triangleCount * 3);
+
+    size_t idx = 0;
+    trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        if (idx >= triangleCount) return;
+
+        int64_t k1 = vertexKey(tri->vertex1[0], tri->vertex1[1], tri->vertex1[2]);
+        int64_t k2 = vertexKey(tri->vertex2[0], tri->vertex2[1], tri->vertex2[2]);
+        int64_t k3 = vertexKey(tri->vertex3[0], tri->vertex3[1], tri->vertex3[2]);
+
+        triVertexKeys[idx * 3 + 0] = k1;
+        triVertexKeys[idx * 3 + 1] = k2;
+        triVertexKeys[idx * 3 + 2] = k3;
+
+        edgeToTriangles[makeEdge(k1, k2)].push_back((int)idx);
+        edgeToTriangles[makeEdge(k2, k3)].push_back((int)idx);
+        edgeToTriangles[makeEdge(k1, k3)].push_back((int)idx);
+
+        idx++;
+    });
+
+    std::vector<bool> visited(triangleCount, false);
+    std::vector<std::vector<int>> clusters;
+
+    for (size_t start = 0; start < triangleCount; ++start) {
+        if (visited[start]) continue;
+
+        int curvId = faceCurvatureIds[start];
+        std::vector<int> cluster;
+        std::vector<int> stack;
+        stack.push_back((int)start);
+
+        while (!stack.empty()) {
+            int triIdx = stack.back();
+            stack.pop_back();
+            if (triIdx < 0 || triIdx >= (int)triangleCount || visited[triIdx]) continue;
+            if (faceCurvatureIds[triIdx] != curvId) continue;
+
+            visited[triIdx] = true;
+            cluster.push_back(triIdx);
+
+            int64_t k1 = triVertexKeys[triIdx * 3 + 0];
+            int64_t k2 = triVertexKeys[triIdx * 3 + 1];
+            int64_t k3 = triVertexKeys[triIdx * 3 + 2];
+
+            auto addNeighbors = [&](int64_t a, int64_t b) {
+                EdgeKey ek = makeEdge(a, b);
+                auto it = edgeToTriangles.find(ek);
+                if (it != edgeToTriangles.end()) {
+                    for (int nIdx : it->second) {
+                        if (!visited[nIdx] && faceCurvatureIds[nIdx] == curvId) {
+                            stack.push_back(nIdx);
+                        }
+                    }
+                }
+            };
+
+            addNeighbors(k1, k2);
+            addNeighbors(k2, k3);
+            addNeighbors(k1, k3);
+        }
+
+        if (!cluster.empty()) {
+            clusters.push_back(std::move(cluster));
+        }
+    }
+
+    printf("[GeoFeature] Found %zu curvature clusters\n", clusters.size());
+
+    int boundaryEdgeCount = 0;
+    for (const auto& [ek, tris] : edgeToTriangles) {
+        if (tris.size() == 1) boundaryEdgeCount++;
+    }
+
+    for (auto& cluster : clusters) {
+        float totalArea = 0.0f;
+        float centerX = 0, centerY = 0, centerZ = 0;
+        float avgMeanCurv = 0;
+        float avgGaussCurv = 0;
+        int boundaryEdges = 0;
+
+        std::unordered_set<int> clusterSet(cluster.begin(), cluster.end());
+
+        for (int triIdx : cluster) {
+            float e1[3], e2[3];
+            trianglePool->for_each([&](hhb::core::Triangle* tri) {
+                static size_t counter = 0;
+                if (counter == (size_t)triIdx) {
+                    e1[0] = tri->vertex2[0] - tri->vertex1[0];
+                    e1[1] = tri->vertex2[1] - tri->vertex1[1];
+                    e1[2] = tri->vertex2[2] - tri->vertex1[2];
+                    e2[0] = tri->vertex3[0] - tri->vertex1[0];
+                    e2[1] = tri->vertex3[1] - tri->vertex1[1];
+                    e2[2] = tri->vertex3[2] - tri->vertex1[2];
+                    centerX += (tri->vertex1[0] + tri->vertex2[0] + tri->vertex3[0]) / 3.0f;
+                    centerY += (tri->vertex1[1] + tri->vertex2[1] + tri->vertex3[1]) / 3.0f;
+                    centerZ += (tri->vertex1[2] + tri->vertex2[2] + tri->vertex3[2]) / 3.0f;
+                }
+                counter++;
+                if (counter >= triangleCount) counter = 0;
+            });
+
+            float cross[3] = {
+                e1[1]*e2[2] - e1[2]*e2[1],
+                e1[2]*e2[0] - e1[0]*e2[2],
+                e1[0]*e2[1] - e1[1]*e2[0]
+            };
+            float area = 0.5f * std::sqrt(cross[0]*cross[0] + cross[1]*cross[1] + cross[2]*cross[2]);
+            totalArea += area;
+            avgMeanCurv += faceMeanCurvature[triIdx];
+            avgGaussCurv += faceGaussianCurvature[triIdx];
+
+            int64_t k1 = triVertexKeys[triIdx * 3 + 0];
+            int64_t k2 = triVertexKeys[triIdx * 3 + 1];
+            int64_t k3 = triVertexKeys[triIdx * 3 + 2];
+
+            auto checkBoundary = [&](int64_t a, int64_t b) {
+                EdgeKey ek = makeEdge(a, b);
+                auto it = edgeToTriangles.find(ek);
+                if (it != edgeToTriangles.end() && it->second.size() == 1) {
+                    boundaryEdges++;
+                } else if (it != edgeToTriangles.end()) {
+                    bool hasExternal = false;
+                    for (int nIdx : it->second) {
+                        if (clusterSet.find(nIdx) == clusterSet.end()) {
+                            hasExternal = true;
+                            break;
+                        }
+                    }
+                    if (hasExternal) boundaryEdges++;
+                }
+            };
+            checkBoundary(k1, k2);
+            checkBoundary(k2, k3);
+            checkBoundary(k1, k3);
+        }
+
+        if (cluster.empty()) continue;
+        avgMeanCurv /= cluster.size();
+        avgGaussCurv /= cluster.size();
+        centerX /= cluster.size();
+        centerY /= cluster.size();
+        centerZ /= cluster.size();
+
+        int featureCategory = 0;
+
+        if (cluster.size() < 5) {
+            featureCategory = 0;
+        }
+        else if (avgGaussCurv > 1.5f && avgMeanCurv > 0.5f && totalArea < 0.5f) {
+            featureCategory = 8;
+        }
+        else if (avgGaussCurv > 1.5f && avgMeanCurv < -0.5f && totalArea < 0.3f) {
+            featureCategory = 9;
+        }
+        else if (avgMeanCurv < -1.0f && boundaryEdges >= 3) {
+            featureCategory = 10;
+        }
+        else if (avgMeanCurv > 1.0f && totalArea > 0.1f && totalArea < 2.0f) {
+            featureCategory = 11;
+        }
+        else if (std::abs(avgMeanCurv) < 0.5f && std::abs(avgGaussCurv) < 0.5f) {
+            featureCategory = 1;
+        }
+        else {
+            featureCategory = 0;
+        }
+
+        for (int triIdx : cluster) {
+            faceCategoryIds[triIdx] = featureCategory;
+        }
+    }
+
+    faceCategoriesComputed = true;
+    geometricFeaturesComputed = true;
+    printf("[GeoFeature] Geometric feature classification complete\n");
     fflush(stdout);
 }
 
@@ -1905,6 +2287,7 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
     printf("  Camera radius: %.2f\n", config.cameraRadius);
     printf("  Image size   : %dx%d\n", config.imageWidth, config.imageHeight);
     printf("  Save mask    : %s\n", config.saveMask ? "YES" : "NO");
+    printf("  Save depth   : %s\n", config.saveDepth ? "YES" : "NO");
     fflush(stdout);
 
     if (triangleCount == 0) {
@@ -1914,7 +2297,7 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
     }
 
     if (config.saveMask) {
-        computeFaceCategories();
+        computeGeometricFeatures();
         updateLabelVertexData();
     }
 
@@ -1923,6 +2306,9 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
     fs::create_directories(config.outputDir + "/rgb");
     if (config.saveMask) {
         fs::create_directories(config.outputDir + "/mask");
+    }
+    if (config.saveDepth) {
+        fs::create_directories(config.outputDir + "/depth");
     }
 
     float origPos[3] = {cameraPosition[0], cameraPosition[1], cameraPosition[2]};
@@ -1944,6 +2330,21 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
 
     auto timeStart = std::chrono::steady_clock::now();
 
+    std::ostringstream cameraPosesJson;
+    cameraPosesJson << "{\n";
+
+    float fov = 45.0f;
+    float nearPlane = 0.1f;
+    float farPlane = 1000.0f;
+    float aspect = (float)config.imageWidth / (float)config.imageHeight;
+    float f = 1.0f / tanf(fov * 0.5f * 3.1415926535f / 180.0f);
+    float projectionArr[16] = {
+        f / aspect, 0.0f, 0.0f, 0.0f,
+        0.0f, f, 0.0f, 0.0f,
+        0.0f, 0.0f, (farPlane + nearPlane) / (nearPlane - farPlane), -1.0f,
+        0.0f, 0.0f, (2.0f * farPlane * nearPlane) / (nearPlane - farPlane), 0.0f
+    };
+
     for (int i = 0; i < config.sampleCount; ++i) {
         float camX, camY, camZ;
         sphericalFibonacciSample(i, config.sampleCount, config.cameraRadius,
@@ -1964,6 +2365,35 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
         cameraRotation[0] = std::asin(dy / dist);
         cameraRotation[1] = std::atan2(dx, dz);
         zoom = 5.0f / dist;
+
+        float viewMatrix[16];
+        computeViewMatrixFromPosition(camX, camY, camZ,
+                                       targetX, targetY, targetZ,
+                                       viewMatrix);
+
+        if (i > 0) cameraPosesJson << ",\n";
+        cameraPosesJson << "  \"" << (i + 1) << "\": {\n";
+        cameraPosesJson << "    \"position\": [" << camX << ", " << camY << ", " << camZ << "],\n";
+        cameraPosesJson << "    \"target\": [" << targetX << ", " << targetY << ", " << targetZ << "],\n";
+        cameraPosesJson << "    \"rotation\": [" << cameraRotation[0] << ", " << cameraRotation[1] << "],\n";
+        cameraPosesJson << "    \"view_matrix\": [";
+        for (int vi = 0; vi < 16; ++vi) {
+            cameraPosesJson << viewMatrix[vi];
+            if (vi < 15) cameraPosesJson << ", ";
+        }
+        cameraPosesJson << "],\n";
+        cameraPosesJson << "    \"projection_matrix\": [";
+        for (int pi = 0; pi < 16; ++pi) {
+            cameraPosesJson << projectionArr[pi];
+            if (pi < 15) cameraPosesJson << ", ";
+        }
+        cameraPosesJson << "],\n";
+        cameraPosesJson << "    \"fov_degrees\": " << fov << ",\n";
+        cameraPosesJson << "    \"near_plane\": " << nearPlane << ",\n";
+        cameraPosesJson << "    \"far_plane\": " << farPlane << ",\n";
+        cameraPosesJson << "    \"image_width\": " << config.imageWidth << ",\n";
+        cameraPosesJson << "    \"image_height\": " << config.imageHeight << "\n";
+        cameraPosesJson << "  }";
 
         // === Pass 1: RGB rendering (PBR shader) ===
         render();
@@ -2005,6 +2435,40 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
             glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         }
 
+        // === Pass 3: Depth map rendering ===
+        if (config.saveDepth) {
+            std::vector<float> depthPixels(config.imageWidth * config.imageHeight);
+            glReadPixels(0, 0, config.imageWidth, config.imageHeight,
+                         GL_DEPTH_COMPONENT, GL_FLOAT, depthPixels.data());
+
+            std::vector<unsigned char> depthPng(config.imageWidth * config.imageHeight * 3);
+            for (int px = 0; px < config.imageWidth * config.imageHeight; ++px) {
+                float d = depthPixels[px];
+                if (d >= 1.0f) d = 1.0f;
+                if (d <= 0.0f) d = 0.0f;
+                unsigned char depthByte = (unsigned char)(d * 255.0f);
+                depthPng[px * 3 + 0] = depthByte;
+                depthPng[px * 3 + 1] = depthByte;
+                depthPng[px * 3 + 2] = depthByte;
+            }
+
+            std::ostringstream depthOss;
+            depthOss << config.outputDir << "/depth/depth_"
+                     << std::setfill('0') << std::setw(4) << (i + 1) << ".png";
+
+            saveFrameAsPNG(depthOss.str(), config.imageWidth, config.imageHeight, depthPng);
+
+            std::ostringstream npyOss;
+            npyOss << config.outputDir << "/depth/depth_"
+                   << std::setfill('0') << std::setw(4) << (i + 1) << ".raw";
+            std::ofstream depthFile(npyOss.str(), std::ios::binary);
+            if (depthFile.is_open()) {
+                depthFile.write(reinterpret_cast<const char*>(depthPixels.data()),
+                                depthPixels.size() * sizeof(float));
+                depthFile.close();
+            }
+        }
+
         glfwPollEvents();
 
         if ((i + 1) % 50 == 0 || i == 0) {
@@ -2012,6 +2476,17 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
                    i + 1, config.sampleCount,
                    100.0f * (i + 1) / config.sampleCount);
             fflush(stdout);
+        }
+    }
+
+    cameraPosesJson << "\n}\n";
+    {
+        std::string posesPath = config.outputDir + "/camera_poses.json";
+        std::ofstream posesFile(posesPath);
+        if (posesFile.is_open()) {
+            posesFile << cameraPosesJson.str();
+            posesFile.close();
+            printf("[CaptureSynthetic] Camera poses saved to: %s\n", posesPath.c_str());
         }
     }
 
@@ -2039,9 +2514,10 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
             const char* categoryNames[] = {
                 "FreeSurface", "HorizontalPlane", "LateralPlane_X",
                 "LateralPlane_Z", "NearHorizontal", "NearLateral_X",
-                "NearLateral_Z", "Degenerate", "Reserved1", "Reserved2"
+                "NearLateral_Z", "Degenerate", "ConvexFeature_Bolt",
+                "ConcaveFeature_Hole", "Flange", "Boss"
             };
-            for (int c = 0; c < 10; ++c) {
+            for (int c = 0; c < 12; ++c) {
                 float r, g, b;
                 categoryToColor(c, &r, &g, &b);
                 legendFile << c << " " << categoryNames[c] << " "

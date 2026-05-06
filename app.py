@@ -226,7 +226,8 @@ def parse_progress(line, total_count):
 
 
 def run_generation(stl_path, output_dir, sample_count, camera_radius,
-                   image_width, image_height, save_mask, progress_callback):
+                   image_width, image_height, save_mask, save_depth=False,
+                   progress_callback=None):
     exe_path = find_cpp_executable()
     if not exe_path:
         return False, "C++ executable not found. Please compile the project first."
@@ -243,6 +244,9 @@ def run_generation(stl_path, output_dir, sample_count, camera_radius,
     ]
     if not save_mask:
         cmd.append("--no-mask")
+
+    if save_depth:
+        cmd.append("--depth")
 
     try:
         process = subprocess.Popen(
@@ -288,11 +292,14 @@ def package_zip(output_dir):
 
     rgb_dir = output_path / "rgb"
     mask_dir = output_path / "mask"
+    depth_dir = output_path / "depth"
     legend_file = output_path / "label_legend.txt"
     desc_file = output_path / "description.json"
+    poses_file = output_path / "camera_poses.json"
 
     rgb_count = len(list(rgb_dir.glob("*.png"))) if rgb_dir.exists() else 0
     mask_count = len(list(mask_dir.glob("*.png"))) if mask_dir.exists() else 0
+    depth_count = len(list(depth_dir.glob("*.png"))) if depth_dir.exists() else 0
 
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
         if rgb_dir.exists():
@@ -301,17 +308,26 @@ def package_zip(output_dir):
         if mask_dir.exists():
             for f in sorted(mask_dir.glob("*.png")):
                 zf.write(f, f"mask/{f.name}")
+        if depth_dir.exists():
+            for f in sorted(depth_dir.glob("*.png")):
+                zf.write(f, f"depth/{f.name}")
+            for f in sorted(depth_dir.glob("*.raw")):
+                zf.write(f, f"depth/{f.name}")
         if legend_file.exists():
             zf.write(legend_file, legend_file.name)
         if desc_file.exists():
             zf.write(desc_file, desc_file.name)
+        if poses_file.exists():
+            zf.write(poses_file, poses_file.name)
         manifest = {
-            "version": "1.0",
+            "version": "2.0",
             "generator": "Huhb3D-SyntheticDataPipeline",
             "rgb_count": rgb_count,
             "mask_count": mask_count,
+            "depth_count": depth_count,
             "has_legend": legend_file.exists(),
             "has_ai_description": desc_file.exists(),
+            "has_camera_poses": poses_file.exists(),
         }
         zf.writestr("manifest.json", json.dumps(manifest, indent=2))
 
@@ -408,6 +424,12 @@ def main():
         save_mask = st.checkbox("🏷️ Generate Semantic Masks", value=True,
                                 help="Generate pixel-level semantic segmentation masks")
 
+        save_depth = st.checkbox("📏 Generate Depth Maps", value=False,
+                                 help="Generate depth maps for robot grasping planning")
+
+        save_camera_poses = st.checkbox("📐 Export Camera Poses (6DoF)", value=True,
+                                        help="Export camera position, rotation, view/projection matrices as JSON")
+
         st.markdown("---")
         st.subheader("🧠 AI Description")
 
@@ -488,6 +510,7 @@ def main():
                 image_width=image_width,
                 image_height=image_height,
                 save_mask=save_mask,
+                save_depth=save_depth,
                 progress_callback=on_progress,
             )
 
@@ -501,13 +524,16 @@ def main():
                 st.markdown("---")
                 st.subheader("📊 Generation Results")
 
-                col_s1, col_s2, col_s3 = st.columns(3)
+                col_s1, col_s2, col_s3, col_s4 = st.columns(4)
                 with col_s1:
                     st.metric("RGB Images", stats["rgb_count"])
                 with col_s2:
                     st.metric("Mask Images", stats["mask_count"])
                 with col_s3:
                     st.metric("Time", f"{elapsed:.1f}s")
+                with col_s4:
+                    depth_count = len(list((session_output / "depth").glob("*.png"))) if (session_output / "depth").exists() else 0
+                    st.metric("Depth Maps", depth_count)
 
                 if stats.get("categories"):
                     with st.expander("🏷️ Label Categories", expanded=False):
@@ -661,7 +687,9 @@ def main():
         dataset.zip
         ├── rgb/frame_0001.png ~ frame_NNNN.png
         ├── mask/mask_0001.png ~ mask_NNNN.png
+        ├── depth/depth_0001.png ~ depth_NNNN.png (if enabled)
         ├── label_legend.txt
+        ├── camera_poses.json (6DoF camera poses)
         ├── description.json (if AI description enabled)
         └── manifest.json
         ```
@@ -677,6 +705,10 @@ def main():
         | 5 | NearLateral_X | Near X-axis surface |
         | 6 | NearLateral_Z | Near Z-axis surface |
         | 7 | Degenerate | Degenerate triangle |
+        | 8 | ConvexFeature_Bolt | Convex protrusion (bolt/boss) |
+        | 9 | ConcaveFeature_Hole | Concave depression (hole) |
+        | 10 | Flange | Flange feature |
+        | 11 | Boss | Boss/stud feature |
         """)
 
 

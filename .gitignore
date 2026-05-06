@@ -87,3 +87,9 @@ imgui.ini
 
 # Logs
 *.log
+
+# GLFW docs (too large for git)
+deps/glfw-*/docs/
+
+# imgui temp build files
+imgui_temp/

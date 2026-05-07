@@ -1,0 +1,13 @@
+# Semantic Label Color Legend
+# Category -> (R, G, B) in 0-255 range
+
+0 FreeSurface 127 127 127
+1 HorizontalPlane 0 0 255
+2 LateralPlane_X 0 255 0
+3 LateralPlane_Z 255 0 0
+4 NearHorizontal 255 255 0
+5 NearLateral_X 255 0 255
+6 NearLateral_Z 0 255 255
+7 Degenerate 255 127 0
+8 Reserved1 127 0 255
+9 Reserved2 0 127 255

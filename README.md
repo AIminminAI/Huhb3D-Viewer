@@ -8,7 +8,7 @@
 
 > 🤖 **面向机器人视觉训练的合成数据生成器** — 上传 CAD 模型，生成 RGB + 语义Mask + 深度图 + 6DoF位姿 + BOP/COCO/YOLO标注
 
-**[📄 效果展示页](demo_showcase.html)** | **[🚀 快速开始](#-快速开始)** | **[💰 商业授权](#-许可证与定价)**
+**[🌐 在线 Demo](https://huggingface.co/spaces/Hgodwarrior/Huhb3D-Synthetic-Data-Generator)** | **[📄 效果展示页](demo_showcase.html)** | **[🚀 快速开始](#-快速开始)** | **[💰 商业授权](#-许可证与定价)**
 
 ---
 

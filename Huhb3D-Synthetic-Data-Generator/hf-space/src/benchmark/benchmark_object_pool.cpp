@@ -1,9 +1,10 @@
 #include <benchmark/benchmark.h>
 #include <vector>
 #include "object_pool.h"
+#include <cstring>
 
 // 测试结构体
-truct TestStruct {
+struct TestStruct {
     int id;
     double value;
     char name[32];

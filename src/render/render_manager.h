@@ -10,6 +10,8 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
+#include <random>
+#include <memory>
 #include "object_pool.h"
 #include "stl_parser.h"
 #include "bvh.h"
@@ -26,6 +28,66 @@ namespace hhb {
 namespace render {
 
 using HighlightType = hhb::core::HighlightType;
+
+struct SceneObject {
+    int instanceId;
+    std::string name;
+    std::string filePath;
+    std::unique_ptr<hhb::core::ObjectPool<hhb::core::Triangle>> trianglePool;
+    std::vector<hhb::core::Triangle*> trianglePtrs;
+    size_t triangleCount;
+    float position[3];
+    float rotation[3];
+    float scale;
+    float bounds[6];
+    float center[3];
+    float maxDim;
+    std::vector<int> faceCategoryIds;
+    std::vector<int> featureInstanceIds;
+    bool categoriesComputed;
+    GLuint VAO, VBO;
+    GLuint labelVAO, labelVBO;
+    std::vector<float> vertexData;
+    std::vector<float> labelVertexData;
+
+    SceneObject() : instanceId(0), triangleCount(0), scale(1.0f),
+                    categoriesComputed(false), VAO(0), VBO(0), labelVAO(0), labelVBO(0),
+                    maxDim(0.0f) {
+        position[0] = position[1] = position[2] = 0.0f;
+        rotation[0] = rotation[1] = rotation[2] = 0.0f;
+        bounds[0] = bounds[1] = bounds[2] = 1e9f;
+        bounds[3] = bounds[4] = bounds[5] = -1e9f;
+        center[0] = center[1] = center[2] = 0.0f;
+        trianglePool = std::make_unique<hhb::core::ObjectPool<hhb::core::Triangle>>();
+    }
+    SceneObject(SceneObject&&) = default;
+    SceneObject& operator=(SceneObject&&) = default;
+    SceneObject(const SceneObject&) = delete;
+    SceneObject& operator=(const SceneObject&) = delete;
+};
+
+struct DomainRandomizationConfig {
+    bool enableLightRandomization;
+    bool enableCameraJitter;
+    bool enableBackgroundRandomization;
+    float lightAngleRange;
+    float lightIntensityRange[2];
+    float lightColorTempRange[2];
+    float cameraJitterPosRange;
+    float cameraJitterRotRange;
+    float focalLengthJitterRange;
+    std::vector<std::string> backgroundPaths;
+    DomainRandomizationConfig()
+        : enableLightRandomization(true),
+          enableCameraJitter(true),
+          enableBackgroundRandomization(false),
+          lightAngleRange(3.14159f),
+          lightIntensityRange{0.5f, 2.0f},
+          lightColorTempRange{3000.0f, 9000.0f},
+          cameraJitterPosRange(0.05f),
+          cameraJitterRotRange(0.02f),
+          focalLengthJitterRange(2.0f) {}
+};
 
 class RenderManager {
 public:
@@ -74,7 +136,6 @@ public:
     
     SpatialInfo getSpatialInfo();
 
-    // 具身智能 Agent 的结果回调：当工具执行完成后更新高亮
     void onToolResult(const std::vector<int>& indices, HighlightType type, const std::string& desc);
 
     struct CaptureConfig {
@@ -85,10 +146,31 @@ public:
         int imageHeight;
         bool saveDepth;
         bool saveMask;
+        bool instanceSegmentation;
+        bool multiObjectScene;
+        int objectCount;
+        float sceneBounds[3];
+        bool enableCollisionAvoidance;
+        DomainRandomizationConfig domainRandomization;
+        std::string topologyLabelsPath;
+        std::vector<std::string> sceneObjectTopologyPaths;
+        bool outputBOPFormat;
+        float depthScale;
+        std::string modelUnit;
         CaptureConfig()
             : sampleCount(1000), outputDir("synthetic_output"),
               cameraRadius(5.0f), imageWidth(800), imageHeight(600),
-              saveDepth(false), saveMask(false) {}
+              saveDepth(false), saveMask(false),
+              instanceSegmentation(true),
+              multiObjectScene(false), objectCount(5),
+              enableCollisionAvoidance(true),
+              outputBOPFormat(true),
+              depthScale(1000.0f),
+              modelUnit("mm") {
+            sceneBounds[0] = 4.0f;
+            sceneBounds[1] = 4.0f;
+            sceneBounds[2] = 2.0f;
+        }
     };
 
     struct CaptureResult {
@@ -100,6 +182,21 @@ public:
     };
 
     CaptureResult captureSyntheticData(const CaptureConfig& config);
+
+    bool addSceneObject(const std::string& filePath, const std::string& name);
+    void clearSceneObjects();
+    size_t getSceneObjectCount() const { return sceneObjects_.size(); }
+    void randomizeSceneLayout();
+    void computeAllFeatureInstances();
+    bool loadTopologyLabels(const std::string& jsonPath);
+    bool loadSceneObjectTopologyLabels(SceneObject& obj, const std::string& jsonPath);
+
+    static void instanceColorEncode(int instanceId, int featureTypeId, int featureIndex,
+                                     float* outR, float* outG, float* outB);
+    static void instanceColorDecode(unsigned char r, unsigned char g, unsigned char b,
+                                     int& instanceId, int& featureTypeId, int& featureIndex);
+
+    static void categoryToColor(int categoryId, float* outR, float* outG, float* outB);
 
 private:
     GLFWwindow* window;
@@ -160,14 +257,12 @@ private:
 
     char filePathBuffer[512];
 
-    // 具身智能 Agent：协调 LLM 推理、工具执行和视觉反馈的闭环
     hhb::core::EmbodiedAIAgent embodiedAgent_;
     hhb::core::GeometryAPI geometryAPI;
     hhb::core::CommandDispatcher commandDispatcher;
     hhb::algorithm::GeometryExpert geometryExpert;
     char userInputBuffer[512];
     
-    // 高亮相关
     std::vector<int> highlightIndices;
     std::vector<int> newHighlightIndices;
     HighlightType currentHighlightType;
@@ -177,9 +272,23 @@ private:
     std::mutex highlightMutex;
     std::string lastAnalysisDesc;
 
-    // 高亮闪烁效果
     float highlightBlinkTimer_;
     bool highlightBlinkState_;
+
+    std::vector<SceneObject> sceneObjects_;
+    std::mt19937 rng_;
+
+    GLuint backgroundVAO_, backgroundVBO_, backgroundShaderProgram_;
+    std::vector<GLuint> backgroundTextures_;
+    std::vector<float> backgroundColors_;
+    int currentBackgroundIndex_;
+    bool backgroundInitialized_;
+
+    void initBackgroundRenderer();
+    void cleanupBackgroundRenderer();
+    void loadBackgroundImages(const std::vector<std::string>& paths);
+    void renderBackground(int backgroundIndex);
+    int selectRandomBackground();
 
     GLuint loadShader(GLenum type, const char* source);
     
@@ -216,7 +325,6 @@ private:
     void updateLabelVertexData();
     void renderLabelMode();
     void setLabelMode(bool active);
-    static void categoryToColor(int categoryId, float* outR, float* outG, float* outB);
 
     void computeCurvature();
     void computeGeometricFeatures();
@@ -225,9 +333,30 @@ private:
     std::vector<float> faceMeanCurvature;
     bool curvatureComputed = false;
     bool geometricFeaturesComputed = false;
+    bool topologyLabelsLoaded = false;
+    std::vector<int> topologyFaceLabels_;
 
     void renderBVH();
     void renderAABB(const hhb::core::Bounds& bounds, const float* color);
+
+    bool loadSceneObjectGeometry(SceneObject& obj);
+    void computeSceneObjectBounds(SceneObject& obj);
+    void computeSceneObjectFeatures(SceneObject& obj);
+    void uploadSceneObjectGPU(SceneObject& obj);
+    void buildSceneObjectLabelData(SceneObject& obj);
+    void buildSceneObjectInstanceLabelData(SceneObject& obj);
+    void renderSceneRGB(const CaptureConfig& config, const float* viewMatrix,
+                        const float* projectionMatrix, const float* lightPos,
+                        const float* lightColor, float lightIntensity);
+    void renderSceneInstanceMask(const CaptureConfig& config, const float* viewMatrix,
+                                 const float* projectionMatrix);
+    void renderSceneSemanticMask(const CaptureConfig& config, const float* viewMatrix,
+                                  const float* projectionMatrix);
+
+    void applyDomainRandomization(const DomainRandomizationConfig& domConfig,
+                                   float& lightAngle, float& lightIntensity, float lightColor[3],
+                                   float& camJitterX, float& camJitterY, float& camJitterZ,
+                                   float& focalJitter);
 };
 
 } // namespace render

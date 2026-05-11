@@ -21,12 +21,23 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_INSTALL OFF CACHE BOOL "" FORCE)
 
-# 从你本地提供的压缩包中获取 GLFW，避免网络下载失败
-FetchContent_Declare(
-    glfw
-    URL ${CMAKE_CURRENT_SOURCE_DIR}/glfw-3.3.8.zip
-)
-FetchContent_MakeAvailable(glfw)
+set(GLFW_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/glfw-3.4.bin.WIN64/glfw-3.4.bin.WIN64")
+if(WIN32 AND EXISTS "${GLFW_DIR}/include/GLFW/glfw3.h")
+    set(GLFW3_INCLUDE_DIR "${GLFW_DIR}/include")
+    set(GLFW3_LIBRARY "${GLFW_DIR}/lib-vc2022/glfw3_mt.lib")
+    add_library(glfw STATIC IMPORTED)
+    set_target_properties(glfw PROPERTIES
+        IMPORTED_LOCATION "${GLFW3_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${GLFW3_INCLUDE_DIR}"
+    )
+    include_directories("${GLFW3_INCLUDE_DIR}")
+else()
+    FetchContent_Declare(
+        glfw
+        URL ${CMAKE_CURRENT_SOURCE_DIR}/glfw-3.3.8.zip
+    )
+    FetchContent_MakeAvailable(glfw)
+endif()
 
 # 核心库
 add_library(hhb_cad_core STATIC

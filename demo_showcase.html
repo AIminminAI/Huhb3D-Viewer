@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Huhb3D Synthetic Data Generator - 机器人视觉合成数据生成器</title>
+<style>
+:root {
+    --primary: #1a1a2e;
+    --accent: #e94560;
+    --accent2: #0f3460;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #2c3e50;
+    --text-light: #7f8c8d;
+    --success: #27ae60;
+    --warning: #f39c12;
+    --border: #e0e0e0;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.hero {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent2) 100%);
+    color: white;
+    padding: 80px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(233,69,96,0.1) 0%, transparent 50%);
+    animation: pulse 4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.hero h1 { font-size: 2.8em; margin-bottom: 15px; position: relative; }
+.hero .subtitle { font-size: 1.3em; opacity: 0.9; margin-bottom: 30px; position: relative; }
+.hero .tagline { font-size: 1.05em; opacity: 0.75; max-width: 700px; margin: 0 auto 30px; position: relative; }
+
+.cta-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; position: relative; }
+.cta-btn {
+    display: inline-block;
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-size: 1.05em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: none;
+    text-decoration: none;
+}
+.cta-primary { background: var(--accent); color: white; }
+.cta-primary:hover { background: #d63851; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(233,69,96,0.4); text-decoration: none; }
+.cta-secondary { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); }
+.cta-secondary:hover { background: rgba(255,255,255,0.25); text-decoration: none; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+.section { padding: 60px 0; }
+.section-title {
+    font-size: 2em;
+    text-align: center;
+    margin-bottom: 15px;
+    color: var(--primary);
+}
+.section-desc {
+    text-align: center;
+    color: var(--text-light);
+    max-width: 700px;
+    margin: 0 auto 40px;
+    font-size: 1.05em;
+}
+
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+}
+.feature-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: 1px solid var(--border);
+}
+.feature-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+.feature-icon { font-size: 2.5em; margin-bottom: 15px; }
+.feature-card h3 { font-size: 1.2em; margin-bottom: 10px; color: var(--primary); }
+.feature-card p { color: var(--text-light); font-size: 0.95em; }
+
+.pipeline-section { background: white; padding: 60px 0; }
+.pipeline-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 30px 0;
+}
+.pipeline-step {
+    background: linear-gradient(135deg, var(--accent2), var(--primary));
+    color: white;
+    padding: 18px 24px;
+    border-radius: 10px;
+    text-align: center;
+    min-width: 140px;
+    box-shadow: 0 3px 10px rgba(15,52,96,0.2);
+}
+.pipeline-step .step-num { font-size: 0.8em; opacity: 0.7; margin-bottom: 4px; }
+.pipeline-step .step-name { font-weight: 600; font-size: 0.95em; }
+.pipeline-arrow { font-size: 1.5em; color: var(--accent); font-weight: bold; }
+
+.demo-section { background: var(--bg); }
+.demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+.demo-card {
+    background: var(--card);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid var(--border);
+}
+.demo-card-header {
+    background: linear-gradient(135deg, var(--accent2), var(--primary));
+    color: white;
+    padding: 15px 20px;
+    font-weight: 600;
+}
+.demo-card-body { padding: 20px; }
+.demo-card-body img {
+    width: 100%;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    background: #f0f0f0;
+    min-height: 180px;
+    object-fit: contain;
+}
+.demo-card-body .caption {
+    font-size: 0.9em;
+    color: var(--text-light);
+    text-align: center;
+}
+
+.format-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+.format-card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
+}
+.format-card .format-icon { font-size: 2em; margin-bottom: 10px; }
+.format-card h4 { color: var(--primary); margin-bottom: 8px; }
+.format-card p { font-size: 0.85em; color: var(--text-light); }
+
+.quickstart {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent2) 100%);
+    color: white;
+    padding: 60px 0;
+}
+.quickstart .section-title { color: white; }
+.quickstart .section-desc { color: rgba(255,255,255,0.8); }
+.code-block {
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 25px;
+    margin: 15px 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.8;
+    overflow-x: auto;
+    color: #e0e0e0;
+}
+.code-block .comment { color: #6a9955; }
+.code-block .cmd { color: #dcdcaa; }
+.code-block .flag { color: #9cdcfe; }
+
+.step-list { counter-reset: step; }
+.step-item {
+    counter-increment: step;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 25px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 20px;
+}
+.step-item::before {
+    content: counter(step);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    background: var(--accent);
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+.step-item h4 { margin-bottom: 5px; }
+.step-item p { opacity: 0.85; font-size: 0.95em; }
+
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+.pricing-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    border: 1px solid var(--border);
+    transition: transform 0.3s;
+}
+.pricing-card:hover { transform: translateY(-4px); }
+.pricing-card.featured {
+    border: 2px solid var(--accent);
+    position: relative;
+}
+.pricing-card.featured::after {
+    content: 'RECOMMENDED';
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: white;
+    padding: 3px 14px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: bold;
+}
+.pricing-tier { font-size: 1.1em; font-weight: 600; color: var(--primary); margin-bottom: 8px; }
+.pricing-price { font-size: 2em; font-weight: bold; color: var(--accent); margin-bottom: 5px; }
+.pricing-period { font-size: 0.85em; color: var(--text-light); margin-bottom: 20px; }
+.pricing-features { list-style: none; text-align: left; margin-bottom: 20px; }
+.pricing-features li { padding: 6px 0; font-size: 0.9em; border-bottom: 1px solid #f0f0f0; }
+.pricing-features li:last-child { border: none; }
+.pricing-features .yes { color: var(--success); }
+.pricing-features .no { color: #ccc; }
+
+.use-cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+.use-case {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 25px;
+    border-left: 4px solid var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.use-case h4 { color: var(--primary); margin-bottom: 8px; }
+.use-case p { font-size: 0.9em; color: var(--text-light); }
+
+.output-tree {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 10px;
+    padding: 25px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.88em;
+    line-height: 1.7;
+    overflow-x: auto;
+}
+.output-tree .dir { color: #569cd6; }
+.output-tree .file { color: #dcdcaa; }
+.output-tree .comment { color: #6a9955; }
+
+.footer {
+    background: var(--primary);
+    color: rgba(255,255,255,0.7);
+    text-align: center;
+    padding: 30px 20px;
+    font-size: 0.9em;
+}
+.footer a { color: rgba(255,255,255,0.9); }
+
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+.badge-new { background: #e8f5e9; color: #2e7d32; }
+.badge-hot { background: #fce4ec; color: #c62828; }
+.badge-pro { background: #e3f2fd; color: #1565c0; }
+
+.stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+    margin: 30px 0;
+}
+.stat-item { text-align: center; }
+.stat-value { font-size: 2.5em; font-weight: bold; color: var(--accent); }
+.stat-label { font-size: 0.9em; color: var(--text-light); }
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.comparison-table th {
+    background: var(--primary);
+    color: white;
+    padding: 14px 18px;
+    text-align: left;
+    font-weight: 600;
+}
+.comparison-table td {
+    padding: 12px 18px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.comparison-table tr:hover td { background: #f8f9fa; }
+
+@media (max-width: 768px) {
+    .hero h1 { font-size: 1.8em; }
+    .hero .subtitle { font-size: 1em; }
+    .pipeline-flow { flex-direction: column; }
+    .pipeline-arrow { transform: rotate(90deg); }
+    .stats-row { gap: 20px; }
+    .stat-value { font-size: 1.8em; }
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+    <h1>🤖 Huhb3D Synthetic Data Generator</h1>
+    <div class="subtitle">机器人视觉合成数据生成器</div>
+    <div class="tagline">
+        上传 CAD 模型 → 生成 RGB + 语义Mask + 深度图 + 6DoF位姿 + BOP/COCO/YOLO标注<br>
+        基于 STEP 拓扑解析的 Ground Truth 标签，Sim-to-Real 增强，支持批量处理
+    </div>
+    <div class="cta-buttons">
+        <a href="#quickstart" class="cta-btn cta-primary">🚀 一键启动 Demo</a>
+        <a href="#features" class="cta-btn cta-secondary">✨ 查看功能</a>
+        <a href="https://github.com/" class="cta-btn cta-secondary">📦 GitHub</a>
+    </div>
+</div>
+
+<div class="stats-row" style="padding: 30px 20px; background: white;">
+    <div class="stat-item">
+        <div class="stat-value">0.5s</div>
+        <div class="stat-label">每帧渲染速度</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value">6</div>
+        <div class="stat-label">输出格式</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value">12+</div>
+        <div class="stat-label">语义类别</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-value">4</div>
+        <div class="stat-label">许可证层级</div>
+    </div>
+</div>
+
+<div class="section" id="features">
+    <div class="section-title">✨ 核心能力</div>
+    <div class="section-desc">
+        从 STEP 文件到可训练数据集，一站式解决机器人视觉训练数据难题
+    </div>
+    <div class="container">
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📐</div>
+                <h3>STEP 拓扑解析 <span class="badge badge-hot">核心</span></h3>
+                <p>基于 OpenCASCADE 解析 STEP 文件拓扑结构，提取 PLANE/CYLINDER/CONE/SPHERE/TORUS 面类型，生成像素级标签。拓扑类型提取准确，但孔/螺栓等语义分类依赖启发式规则，对复杂零件可能需调参</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>6DoF Ground Truth</h3>
+                <p>每帧输出精确的相机位姿（旋转矩阵+平移向量+四元数），BOP 格式标准输出，直接用于 6DoF 位姿估计训练</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Instance Segmentation <span class="badge badge-new">新增</span></h3>
+                <p>RGB Mask 编码 (InstanceID, FeatureTypeID, FeatureIndex)，支持同类多实例区分，如多个螺栓/孔分别标注</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌊</div>
+                <h3>Sim-to-Real 增强</h3>
+                <p>高斯噪声 / 运动模糊 / 随机遮挡 / 色彩抖动 / 深度噪声，弥合仿真-现实差距，提升模型泛化能力</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📏</div>
+                <h3>线性深度图</h3>
+                <p>OpenGL NDC → 线性深度转换，uint16 编码，支持 mm/m/cm/inch 单位，直接用于机器人抓取规划</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎲</div>
+                <h3>Domain Randomization</h3>
+                <p>随机光照 / 相机抖动 / 背景替换，大幅提升训练数据多样性，增强模型鲁棒性</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>C++ 高性能渲染</h3>
+                <p>OpenGL 3.3+ + BVH 加速 + 零拷贝 STL 解析，约 0.5s/帧 (800x600)，批量生成效率高</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>质量报告 <span class="badge badge-pro">商用</span></h3>
+                <p>自动生成数据集质量报告（JSON+HTML），含训练就绪度评分、BOP合规检查、标注质量分析，可交付客户</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h3>批量 Pipeline</h3>
+                <p>一键处理整个 STEP 文件目录，自动完成 拓扑→渲染→增强→标注→报告 全流程，支持商用规模数据生成</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="pipeline-section">
+    <div class="section-title">🔄 数据生成 Pipeline</div>
+    <div class="section-desc">从 CAD 文件到可训练数据集，5 步自动化流程</div>
+    <div class="container">
+        <div class="pipeline-flow">
+            <div class="pipeline-step">
+                <div class="step-num">STEP 1</div>
+                <div class="step-name">📐 STEP 拓扑解析</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="step-num">STEP 2</div>
+                <div class="step-name">🖥️ C++ 多视角渲染</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="step-num">STEP 3</div>
+                <div class="step-name">🌊 Sim-to-Real 增强</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="step-num">STEP 4</div>
+                <div class="step-name">📋 格式转换</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step">
+                <div class="step-num">STEP 5</div>
+                <div class="step-name">📊 质量报告</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section demo-section" id="demo">
+    <div class="section-title">🖼️ 效果展示</div>
+    <div class="section-desc">以下为真实生成数据样例，展示从 CAD 模型到训练数据的完整输出</div>
+    <div class="container">
+        <div class="demo-grid">
+            <div class="demo-card">
+                <div class="demo-card-header">📷 RGB 渲染图</div>
+                <div class="demo-card-body">
+                    <img src="demo_data/rgb/frame_0001.png" alt="RGB Sample" onerror="this.style.background='#f0f0f0';this.alt='RGB渲染样例 - 运行Demo后可见'">
+                    <div class="caption">360° Fibonacci 球面采样，多角度渲染</div>
+                </div>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-header">🏷️ 语义分割 Mask</div>
+                <div class="demo-card-body">
+                    <img src="demo_data/mask/mask_0001.png" alt="Mask Sample" onerror="this.style.background='#f0f0f0';this.alt='Mask样例 - 运行Demo后可见'">
+                    <div class="caption">像素级语义标注，12类几何特征</div>
+                </div>
+            </div>
+            <div class="demo-card">
+                <div class="demo-card-header">📐 6DoF 相机位姿</div>
+                <div class="demo-card-body">
+                    <div style="background:#1e1e1e;color:#d4d4d4;border-radius:6px;padding:15px;font-family:Consolas,monospace;font-size:0.82em;line-height:1.6;text-align:left;">
+<span style="color:#6a9955;">// scene_camera.json (BOP Format)</span>
+{
+  "1": {
+    <span style="color:#9cdcfe;">"cam_K"</span>: [fx, 0, cx, 0, fy, cy, 0, 0, 1],
+    <span style="color:#9cdcfe;">"depth_scale"</span>: 1.0
+  }
+}
+<span style="color:#6a9955;">// scene_gt.json (6DoF Ground Truth)</span>
+{
+  "1": [{
+    <span style="color:#9cdcfe;">"obj_id"</span>: 1,
+    <span style="color:#9cdcfe;">"cam_R_m2c"</span>: [[r00,r01,r02],...],
+    <span style="color:#9cdcfe;">"cam_t_m2c"</span>: [tx, ty, tz],
+    <span style="color:#9cdcfe;">"cam_R_t_m2c"</span>: [qw,qx,qy,qz]
+  }]
+}
+                    </div>
+                    <div class="caption">BOP 标准格式，兼容主流位姿估计框架</div>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="text-align:center;margin:40px 0 20px;color:var(--primary);">🏷️ STEP 拓扑 Ground Truth 标签</h3>
+        <div style="overflow-x:auto;">
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>面类型 (OpenCASCADE)</th>
+                        <th>Feature ID</th>
+                        <th>含义</th>
+                        <th>Mask 颜色</th>
+                        <th>典型应用</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>PLANE</strong></td><td>1</td><td>平面</td><td>🔵 蓝色</td><td>装配面检测、平面抓取</td></tr>
+                    <tr><td><strong>CYLINDER</strong></td><td>2</td><td>圆柱面</td><td>🟢 绿色</td><td>轴孔配合、圆柱抓取</td></tr>
+                    <tr><td><strong>CONE</strong></td><td>3</td><td>圆锥面</td><td>🟡 黄色</td><td>锥度检测、定位销</td></tr>
+                    <tr><td><strong>SPHERE</strong></td><td>4</td><td>球面</td><td>🟣 紫色</td><td>球关节检测</td></tr>
+                    <tr><td><strong>TORUS</strong></td><td>5</td><td>环面</td><td>🔴 红色</td><td>密封槽、O型圈槽</td></tr>
+                    <tr><td><strong>OTHER</strong></td><td>6</td><td>自由曲面</td><td>⚪ 灰色</td><td>复杂曲面识别</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">📦 输出格式</div>
+    <div class="section-desc">一次生成，6种格式全覆盖，直接对接主流视觉训练框架</div>
+    <div class="container">
+        <div class="format-grid">
+            <div class="format-card">
+                <div class="format-icon">🎯</div>
+                <h4>BOP</h4>
+                <p>6DoF 位姿估计标准格式<br>scene_camera + scene_gt</p>
+            </div>
+            <div class="format-card">
+                <div class="format-icon">🏷️</div>
+                <h4>COCO</h4>
+                <p>实例/语义分割 JSON<br>兼容 Detectron2 / MMDet</p>
+            </div>
+            <div class="format-card">
+                <div class="format-icon">🔍</div>
+                <h4>YOLO</h4>
+                <p>YOLOv8 检测+分割标签<br>含 data.yaml 配置</p>
+            </div>
+            <div class="format-card">
+                <div class="format-icon">📷</div>
+                <h4>RGB + Mask</h4>
+                <p>PNG 格式渲染图<br>像素级语义/实例标注</p>
+            </div>
+            <div class="format-card">
+                <div class="format-icon">📏</div>
+                <h4>Depth Map</h4>
+                <p>uint16 线性深度图<br>支持 mm/m/cm/inch 单位</p>
+            </div>
+            <div class="format-card">
+                <div class="format-icon">📊</div>
+                <h4>Quality Report</h4>
+                <p>JSON + HTML 质量报告<br>训练就绪度评分</p>
+            </div>
+        </div>
+
+        <h3 style="text-align:center;margin:40px 0 20px;color:var(--primary);">📂 输出目录结构</h3>
+        <div class="output-tree">
+<span class="dir">run_20260511_143022/</span>
+├── <span class="dir">rgb/</span>                        <span class="comment"># RGB 渲染图片</span>
+│   ├── <span class="file">frame_0001.png</span>          <span class="comment"># 800×600 PNG</span>
+│   └── ...
+├── <span class="dir">mask/</span>                       <span class="comment"># 语义分割 Mask</span>
+│   ├── <span class="file">mask_0001.png</span>           <span class="comment"># 颜色编码 = 类别</span>
+│   └── ...
+├── <span class="dir">mask_instance/</span>               <span class="comment"># 实例分割 Mask</span>
+│   ├── <span class="file">instance_0001.png</span>       <span class="comment"># R=InstanceID, G=FeatureType, B=Index</span>
+│   └── ...
+├── <span class="dir">depth/</span>                      <span class="comment"># 深度图</span>
+│   ├── <span class="file">depth_0001.png</span>          <span class="comment"># uint16 线性深度 (mm)</span>
+│   └── ...
+├── <span class="file">scene_camera.json</span>            <span class="comment"># BOP 相机内参</span>
+├── <span class="file">scene_gt.json</span>                <span class="comment"># BOP 6DoF Ground Truth</span>
+├── <span class="file">gt_6dof.json</span>                 <span class="comment"># 完整 6DoF 位姿数据</span>
+├── <span class="file">camera_poses.json</span>            <span class="comment"># 相机位姿 (View/Proj Matrix)</span>
+├── <span class="file">coco_annotations.json</span>        <span class="comment"># COCO 格式标注</span>
+├── <span class="dir">yolo_labels/</span>                 <span class="comment"># YOLO 格式标注</span>
+├── <span class="file">data.yaml</span>                    <span class="comment"># YOLO 训练配置</span>
+├── <span class="file">dataset_report.json</span>          <span class="comment"># 数据质量报告</span>
+├── <span class="file">dataset_report.html</span>          <span class="comment"># 可视化质量报告</span>
+├── <span class="file">topology_labels.json</span>         <span class="comment"># STEP 拓扑 Ground Truth</span>
+├── <span class="file">topology_summary.json</span>        <span class="comment"># 拓扑统计摘要</span>
+├── <span class="file">label_legend.txt</span>             <span class="comment"># 标签-颜色映射</span>
+└── <span class="file">manifest.json</span>                <span class="comment"># 生成元信息</span>
+        </div>
+    </div>
+</div>
+
+<div class="quickstart" id="quickstart">
+    <div class="section-title">🚀 快速启动</div>
+    <div class="section-desc">⚠️ 重要：完整数据生成需要编译 C++ 渲染引擎，未编译时仅可查看预生成的 Demo 数据</div>
+    <div class="container">
+        <div class="step-list">
+            <div class="step-item">
+                <div>
+                    <h4>📋 系统要求</h4>
+                    <p><strong>必须：</strong>Python 3.8+（推荐 Miniconda）</p>
+                    <p><strong>完整功能：</strong>Visual Studio 2019+（含 C++ 桌面开发工具）、CMake 3.16+</p>
+                    <p><strong>STEP 拓扑：</strong>cadquery（~500MB，含 OpenCASCADE）</p>
+                    <p style="margin-top:8px;color:#e94560;">⚠️ 没有 C++ 引擎 = 只能查看 Demo 数据，无法生成新数据</p>
+                </div>
+            </div>
+            <div class="step-item">
+                <div>
+                    <h4>方式一：一键启动（查看 Demo）</h4>
+                    <p>Windows 用户双击 <code>start_demo.bat</code>，自动安装依赖并打开浏览器：</p>
+                    <div class="code-block">
+<span class="comment">REM 自动检测 Python + 安装依赖 + 启动 Web UI</span>
+<span class="cmd">start_demo.bat</span>
+                    </div>
+                    <p style="margin-top:8px;">💡 未编译 C++ 引擎时，进入 Demo 模式查看预生成样例数据</p>
+                </div>
+            </div>
+            <div class="step-item">
+                <div>
+                    <h4>方式二：编译 C++ 引擎（解锁完整功能）</h4>
+                    <p>编译后可上传自己的 CAD 模型生成数据：</p>
+                    <div class="code-block">
+<span class="comment">REM 自动检测 Visual Studio 并编译</span>
+<span class="cmd">build_and_compile.bat</span>
+                    </div>
+                    <p style="margin-top:8px;">编译成功后重新运行 start_demo.bat 即可</p>
+                </div>
+            </div>
+            <div class="step-item">
+                <div>
+                    <h4>方式三：Docker 部署（推荐服务器/云端）</h4>
+                    <div class="code-block">
+<span class="cmd">docker</span> build <span class="flag">-t</span> huhb3d-synthetic .
+<span class="cmd">docker</span> run <span class="flag">-p</span> 7860:7860 huhb3d-synthetic
+<span class="comment"># 访问 http://localhost:7860</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">🎯 适用场景</div>
+    <div class="section-desc">专为机器人视觉和工业AI训练设计</div>
+    <div class="container">
+        <div class="use-cases">
+            <div class="use-case">
+                <h4>🤖 6DoF 位姿估计</h4>
+                <p>生成 BOP 格式训练数据，训练机器人抓取定位模型。支持单物体/多物体场景。</p>
+            </div>
+            <div class="use-case">
+                <h4>🔩 几何特征检测</h4>
+                <p>基于 STEP 拓扑的 Ground Truth 标签，训练孔/螺栓/法兰/凸台检测模型。</p>
+            </div>
+            <div class="use-case">
+                <h4>🏭 工业质检</h4>
+                <p>批量生成零件缺陷检测数据，Sim-to-Real 增强提升真实场景泛化能力。</p>
+            </div>
+            <div class="use-case">
+                <h4>🦾 机器人抓取规划</h4>
+                <p>线性深度图 + 语义分割，直接用于抓取点检测和避障规划训练。</p>
+            </div>
+            <div class="use-case">
+                <h4>📊 AI 训练数据服务</h4>
+                <p>批量 Pipeline 处理整个零件目录，快速生成大规模标注数据集。</p>
+            </div>
+            <div class="use-case">
+                <h4>🎓 学术研究</h4>
+                <p>免费版支持 100 张/会话，适合论文实验和算法验证。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section" style="background:white;">
+    <div class="section-title">💰 许可证与定价</div>
+    <div class="section-desc">4 级许可证，从免费体验到企业定制</div>
+    <div class="container">
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <div class="pricing-tier">Free</div>
+                <div class="pricing-price">¥0</div>
+                <div class="pricing-period">永久免费</div>
+                <ul class="pricing-features">
+                    <li class="yes">✅ 100 张/会话</li>
+                    <li class="yes">✅ RGB + 语义 Mask</li>
+                    <li class="no">❌ STEP 拓扑解析</li>
+                    <li class="no">❌ Sim-to-Real</li>
+                    <li class="no">❌ 批量 Pipeline</li>
+                    <li class="no">❌ BOP 格式</li>
+                    <li class="no">❌ 深度图</li>
+                </ul>
+            </div>
+            <div class="pricing-card">
+                <div class="pricing-tier">Standard</div>
+                <div class="pricing-price">¥2,999</div>
+                <div class="pricing-period">/年</div>
+                <ul class="pricing-features">
+                    <li class="yes">✅ 5,000 张/会话</li>
+                    <li class="yes">✅ RGB + 语义/实例 Mask</li>
+                    <li class="yes">✅ STEP 拓扑解析</li>
+                    <li class="yes">✅ Sim-to-Real 增强</li>
+                    <li class="yes">✅ BOP 格式输出</li>
+                    <li class="yes">✅ 深度图</li>
+                    <li class="no">❌ 批量 Pipeline</li>
+                </ul>
+            </div>
+            <div class="pricing-card featured">
+                <div class="pricing-tier">Professional</div>
+                <div class="pricing-price">¥9,999</div>
+                <div class="pricing-period">/年</div>
+                <ul class="pricing-features">
+                    <li class="yes">✅ 50,000 张/会话</li>
+                    <li class="yes">✅ 全部 Standard 功能</li>
+                    <li class="yes">✅ 批量 Pipeline</li>
+                    <li class="yes">✅ 多物体场景</li>
+                    <li class="yes">✅ API 访问</li>
+                    <li class="yes">✅ 质量报告</li>
+                    <li class="yes">✅ YOLO-seg 导出</li>
+                </ul>
+            </div>
+            <div class="pricing-card">
+                <div class="pricing-tier">Enterprise</div>
+                <div class="pricing-price">¥29,999</div>
+                <div class="pricing-period">/年</div>
+                <ul class="pricing-features">
+                    <li class="yes">✅ 无限图片</li>
+                    <li class="yes">✅ 全部功能</li>
+                    <li class="yes">✅ 优先技术支持</li>
+                    <li class="yes">✅ 定制集成</li>
+                    <li class="yes">✅ 私有部署</li>
+                    <li class="yes">✅ SLA 保障</li>
+                    <li class="yes">✅ 专属客户经理</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">🏆 竞品对比</div>
+    <div class="section-desc">与主流合成数据生成工具对比</div>
+    <div class="container" style="overflow-x:auto;">
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>功能</th>
+                    <th>Huhb3D</th>
+                    <th>BlenderProc</th>
+                    <th>NVIDIA Isaac Sim</th>
+                    <th>Unity Perception</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>STEP 拓扑 Ground Truth</strong></td>
+                    <td>✅ 原生支持</td>
+                    <td>❌ 不支持</td>
+                    <td>❌ 不支持</td>
+                    <td>❌ 不支持</td>
+                </tr>
+                <tr>
+                    <td><strong>BOP 格式输出</strong></td>
+                    <td>✅ 原生</td>
+                    <td>✅ 原生</td>
+                    <td>✅ 需配置</td>
+                    <td>⚠️ 需转换</td>
+                </tr>
+                <tr>
+                    <td><strong>一键 Web UI</strong></td>
+                    <td>✅ Streamlit</td>
+                    <td>❌ 命令行</td>
+                    <td>⚠️ 复杂配置</td>
+                    <td>⚠️ Unity Editor</td>
+                </tr>
+                <tr>
+                    <td><strong>部署难度</strong></td>
+                    <td>🟢 低 (pip install)</td>
+                    <td>🟡 中 (需 Blender)</td>
+                    <td>🔴 高 (GPU集群)</td>
+                    <td>🟡 中 (需 Unity)</td>
+                </tr>
+                <tr>
+                    <td><strong>硬件要求</strong></td>
+                    <td>🟢 CPU即可渲染</td>
+                    <td>🟡 需GPU(Blender)</td>
+                    <td>🔴 高端GPU</td>
+                    <td>🟡 需GPU</td>
+                </tr>
+                <tr>
+                    <td><strong>渲染质量</strong></td>
+                    <td>🟡 基础PBR</td>
+                    <td>🟢 高(Cycles)</td>
+                    <td>🟢 高(RTX)</td>
+                    <td>🟢 高</td>
+                </tr>
+                <tr>
+                    <td><strong>物理仿真</strong></td>
+                    <td>❌ 不支持</td>
+                    <td>⚠️ 有限</td>
+                    <td>✅ 完整</td>
+                    <td>⚠️ 有限</td>
+                </tr>
+                <tr>
+                    <td><strong>价格</strong></td>
+                    <td>免费~¥29,999/年</td>
+                    <td>免费开源</td>
+                    <td>免费~$5,000/年</td>
+                    <td>免费</td>
+                </tr>
+                <tr>
+                    <td><strong>批量 Pipeline</strong></td>
+                    <td>✅ 内置</td>
+                    <td>⚠️ 需自写脚本</td>
+                    <td>✅ 内置</td>
+                    <td>⚠️ 需自写</td>
+                </tr>
+                <tr>
+                    <td><strong>质量报告</strong></td>
+                    <td>✅ 自动生成</td>
+                    <td>❌ 无</td>
+                    <td>⚠️ 基础</td>
+                    <td>⚠️ 基础</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="section" style="background:white;">
+    <div class="section-title">📞 联系我们</div>
+    <div class="section-desc">获取商业授权、技术支持或合作洽谈</div>
+    <div class="container" style="text-align:center;">
+        <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-top:20px;">
+            <a href="https://github.com/" class="cta-btn cta-primary" style="display:inline-block;">📦 GitHub 仓库</a>
+            <a href="mailto:huhb3d@example.com" class="cta-btn cta-secondary" style="display:inline-block;background:var(--accent2);color:white;">📧 商业合作</a>
+            <a href="#quickstart" class="cta-btn cta-secondary" style="display:inline-block;">🚀 立即体验</a>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    <p>© 2025 Huhb3D Synthetic Data Generator | Developed by Huhb</p>
+    <p style="margin-top:8px;">致力于探索图形学与工业软件的极限性能 — 专注机器人视觉合成数据生成</p>
+    <p style="margin-top:8px;">License: AGPL-3.0 | 商业闭源授权请联系开发者</p>
+</div>
+
+</body>
+</html>

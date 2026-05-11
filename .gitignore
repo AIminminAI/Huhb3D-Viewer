@@ -87,6 +87,13 @@ imgui.ini
 
 # Logs
 *.log
+build_err.txt
+build_log.txt
+
+# Large media files
+*.mp4
+*.avi
+*.mov
 
 # GLFW docs (too large for git)
 deps/glfw-*/docs/

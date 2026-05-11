@@ -47,7 +47,7 @@ private:
     // 构建模型元数据字符串
     std::string buildModelMetadata() const;
 
-    core::LLMClient llmClient;
+    core::LLMClient& llmClient;
     rag::DocumentRetriever documentRetriever;
     std::string lastError;
 

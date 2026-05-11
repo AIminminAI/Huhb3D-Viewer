@@ -1,8 +1,5 @@
 deps/
 *.dll
 *.lib
-deps/
-*.dll
-*.lib
 *.a
 *.exe

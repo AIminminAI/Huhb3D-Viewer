@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <initializer_list>
 #include <cmath>
+#include <memory>
 
 namespace nlohmann {
 
@@ -24,11 +25,44 @@ public:
     json(int i) : type_(value_t::number_integer), int_val_(i), float_val_(0.0) {}
     json(bool b) : type_(value_t::boolean), bool_val_(b), int_val_(0), float_val_(0.0) {}
 
+    json(const json& other)
+        : type_(other.type_), str_val_(other.str_val_), int_val_(other.int_val_),
+          float_val_(other.float_val_), bool_val_(other.bool_val_),
+          arr_val_(other.arr_val_), obj_val_(other.obj_val_),
+          pair_key_(other.pair_key_), is_pair_(other.is_pair_) {
+        if (other.pair_val_) {
+            pair_val_ = std::make_shared<json>(*other.pair_val_);
+        }
+    }
+
+    json& operator=(const json& other) {
+        if (this != &other) {
+            type_ = other.type_;
+            str_val_ = other.str_val_;
+            int_val_ = other.int_val_;
+            float_val_ = other.float_val_;
+            bool_val_ = other.bool_val_;
+            arr_val_ = other.arr_val_;
+            obj_val_ = other.obj_val_;
+            pair_key_ = other.pair_key_;
+            is_pair_ = other.is_pair_;
+            if (other.pair_val_) {
+                pair_val_ = std::make_shared<json>(*other.pair_val_);
+            } else {
+                pair_val_.reset();
+            }
+        }
+        return *this;
+    }
+
+    json(json&&) = default;
+    json& operator=(json&&) = default;
+
     json(std::initializer_list<json> init) {
         if (init.size() > 0 && init.begin()->is_pair()) {
             type_ = value_t::object;
             for (const auto& el : init) {
-                obj_val_[el.pair_key_] = el.pair_val_;
+                obj_val_[el.pair_key_] = *el.pair_val_;
             }
         } else {
             type_ = value_t::array;
@@ -173,11 +207,11 @@ private:
     std::map<std::string, json> obj_val_;
 
     std::string pair_key_;
-    json pair_val_;
+    std::shared_ptr<json> pair_val_;
     bool is_pair_ = false;
 
     json(bool is_pair, const std::string& key, const json& val)
-        : type_(value_t::null), is_pair_(is_pair), pair_key_(key), pair_val_(val) {}
+        : type_(value_t::null), is_pair_(is_pair), pair_key_(key), pair_val_(std::make_shared<json>(val)) {}
 
     bool is_pair() const { return is_pair_; }
 

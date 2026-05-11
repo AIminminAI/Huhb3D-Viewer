@@ -78,49 +78,50 @@ struct LLMClient::Impl {
     }
 
     // 解析 LLM 返回的 tool_calls，将语义指令映射为 C++ 可执行结构
-    std::vector<ToolCall> parseToolCallsFromResponse(const std::string& response_body) const {
+    std::vector<ToolCall> parseToolCallsFromResponse(const std::string& jsonResponse) const {
         std::vector<ToolCall> result;
         try {
-            nlohmann::json resp = nlohmann::json::parse(response_body);
+            auto json = nlohmann::json::parse(jsonResponse);
+            if (!json.contains("choices") || json["choices"].empty()) return result;
+            
+            auto& message = json["choices"][0].contains("message") ? json["choices"][0]["message"] : json["choices"][0];
+            
+            // 修复点：不能用 auto& 绑定到临时对象
+            nlohmann::json tool_calls_json;
+            if (message.contains("tool_calls")) {
+                tool_calls_json = message["tool_calls"];
+            } else {
+                tool_calls_json = nlohmann::json::array();
+            }
 
-            if (!resp.contains("choices") || resp["choices"].size() == 0) return result;
-
-            auto& choice = resp["choices"][0];
-            if (!choice.contains("message")) return result;
-            auto& message = choice["message"];
-
-            if (!message.contains("tool_calls")) return result;
-            auto& tool_calls = message["tool_calls"];
-
-            for (size_t i = 0; i < tool_calls.size(); ++i) {
-                auto& tc = tool_calls[i];
+            for (auto& tc : tool_calls_json) {
                 ToolCall call;
-                call.id = tc.contains("id") ? tc["id"].as_string() : ("call_" + std::to_string(i));
+                call.id = tc.contains("id") ? tc["id"].get<std::string>() : ("call_" + std::to_string(result.size()));
                 if (tc.contains("function")) {
                     auto& func = tc["function"];
-                    call.name = func.contains("name") ? func["name"].as_string() : "";
-                    call.arguments_json = func.contains("arguments") ? func["arguments"].as_string() : "{}";
+                    call.name = func.contains("name") ? func["name"].get<std::string>() : "";
+                    call.arguments_json = func.contains("arguments") ? func["arguments"].get<std::string>() : "{}";
                 }
                 result.push_back(call);
             }
         } catch (const std::exception& e) {
-            last_error = std::string("Parse tool_calls error: ") + e.what();
+            std::cerr << "Error parsing ToolCalls: " << e.what() << std::endl;
         }
         return result;
     }
 
     // 提取 LLM 文本回复
-    std::string extractTextContent(const std::string& response_body) const {
+    std::string extractTextContent(const std::string& jsonResponse) const {
         try {
-            nlohmann::json resp = nlohmann::json::parse(response_body);
-            if (!resp.contains("choices") || resp["choices"].size() == 0) return "";
-            auto& choice = resp["choices"][0];
-            if (!choice.contains("message")) return "";
-            auto& message = choice["message"];
-            if (message.contains("content") && !message["content"].is_null()) {
-                return message["content"].as_string();
+            auto json = nlohmann::json::parse(jsonResponse);
+            if (!json.contains("choices") || json["choices"].empty()) return "";
+            auto& message = json["choices"][0].contains("message") ? json["choices"][0]["message"] : json["choices"][0];
+            if (message.contains("content")) {
+                return message["content"].get<std::string>();
             }
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            std::cerr << "Error extracting TextContent: " << e.what() << std::endl;
+        }
         return "";
     }
 
@@ -146,6 +147,11 @@ struct LLMClient::Impl {
         }
         return result;
     }
+};
+
+private:
+    std::string apiKey_;
+    std::string endpoint_;
 };
 
 LLMClient::LLMClient() : impl_(std::make_unique<Impl>()) {}

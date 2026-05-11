@@ -39,6 +39,11 @@ RUN mkdir -p /app/build && cd /app/build \
 
 COPY app.py /app/
 COPY mask_to_coco.py /app/
+COPY step_topology_parser.py /app/
+COPY sim_to_real.py /app/
+COPY dataset_report.py /app/
+COPY batch_pipeline.py /app/
+COPY license_guard.py /app/
 COPY requirements.txt /app/
 COPY entrypoint.sh /app/
 

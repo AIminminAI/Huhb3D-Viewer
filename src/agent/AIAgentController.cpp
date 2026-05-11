@@ -9,10 +9,8 @@ namespace hhb {
 namespace agent {
 
 AIAgentController::AIAgentController(render::RenderManager& renderManager)
-    : currentTriangleCount_(0), renderManager(renderManager) {
-    // 设置默认的 API 端点
+    : llmClient(core::LLMClient::getInstance()), currentTriangleCount_(0), renderManager(renderManager) {
     llmClient.setEndpoint("https://api.openai.com/v1/chat/completions");
-    // 初始化文档检索器
     documentRetriever.initialize();
 }
 

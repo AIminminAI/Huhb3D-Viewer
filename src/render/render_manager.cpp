@@ -34,9 +34,14 @@
 #include <iomanip>
 #include <sstream>
 #include <filesystem>
+#include <set>
+#include <memory>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 #include "render_manager.h"
 #include "../skill/ISkill.h"
@@ -233,7 +238,9 @@ RenderManager::RenderManager(int width, int height, const std::string& title)
       showBVH(false), showHighlight(false),
       currentHighlightType(HighlightType::None),
       highlightCalculated(false),
-      highlightBlinkTimer_(0.0f), highlightBlinkState_(true) {
+      highlightBlinkTimer_(0.0f), highlightBlinkState_(true),
+      backgroundVAO_(0), backgroundVBO_(0), backgroundShaderProgram_(0),
+      currentBackgroundIndex_(0), backgroundInitialized_(false) {
     commandDispatcher.start(8080);
     cameraPosition[0] = 0.0f;
     cameraPosition[1] = 0.0f;
@@ -1041,7 +1048,7 @@ void RenderManager::computeCurvature() {
             vertexKey(tri->vertex3[0], tri->vertex3[1], tri->vertex3[2])
         };
 
-        float (*verts)[3] = {&tri->vertex1[0], &tri->vertex2[0], &tri->vertex3[0]};
+        float* verts[3] = {&tri->vertex1[0], &tri->vertex2[0], &tri->vertex3[0]};
 
         for (int v = 0; v < 3; ++v) {
             auto& info = vertexMap[keys[v]];
@@ -2250,28 +2257,35 @@ bool RenderManager::saveFrameAsPNG(const std::string& filename, int w, int h,
 void RenderManager::computeViewMatrixFromPosition(float camX, float camY, float camZ,
                                                    float targetX, float targetY, float targetZ,
                                                    float* outView16) {
-    using namespace glm;
-    vec3 camPos(camX, camY, camZ);
-    vec3 target(targetX, targetY, targetZ);
-    vec3 worldUp(0.0f, 1.0f, 0.0f);
+    float fx = targetX - camX, fy = targetY - camY, fz = targetZ - camZ;
+    float fLen = std::sqrt(fx*fx + fy*fy + fz*fz);
+    if (fLen > 0.0001f) { fx /= fLen; fy /= fLen; fz /= fLen; }
 
-    vec3 forward = normalize(target - camPos);
-    vec3 right = normalize(cross(forward, worldUp));
-
-    if (length(right) < 0.0001f) {
-        vec3 altUp(0.0f, 0.0f, 1.0f);
-        right = normalize(cross(forward, altUp));
+    float rx = fy*0.0f - fz*1.0f;
+    float ry = fz*0.0f - fx*0.0f;
+    float rz = fx*1.0f - fy*0.0f;
+    float rLen = std::sqrt(rx*rx + ry*ry + rz*rz);
+    if (rLen > 0.0001f) { rx /= rLen; ry /= rLen; rz /= rLen; }
+    else {
+        rx = fz*0.0f - fy*1.0f;
+        ry = fx*0.0f - fz*0.0f;
+        rz = fy*1.0f - fx*0.0f;
+        rLen = std::sqrt(rx*rx + ry*ry + rz*rz);
+        if (rLen > 0.0001f) { rx /= rLen; ry /= rLen; rz /= rLen; }
     }
 
-    vec3 up = cross(right, forward);
+    float ux = ry*fz - rz*fy;
+    float uy = rz*fx - rx*fz;
+    float uz = rx*fy - ry*fx;
 
-    mat4 viewMat = mat4(1.0f);
-    viewMat[0][0] = right.x;   viewMat[1][0] = right.y;   viewMat[2][0] = right.z;   viewMat[3][0] = -dot(right, camPos);
-    viewMat[0][1] = up.x;      viewMat[1][1] = up.y;      viewMat[2][1] = up.z;      viewMat[3][1] = -dot(up, camPos);
-    viewMat[0][2] = -forward.x; viewMat[1][2] = -forward.y; viewMat[2][2] = -forward.z; viewMat[3][2] = dot(forward, camPos);
-    viewMat[0][3] = 0.0f;      viewMat[1][3] = 0.0f;      viewMat[2][3] = 0.0f;      viewMat[3][3] = 1.0f;
+    float rd = rx*camX + ry*camY + rz*camZ;
+    float ud = ux*camX + uy*camY + uz*camZ;
+    float fd = fx*camX + fy*camY + fz*camZ;
 
-    std::memcpy(outView16, value_ptr(viewMat), 16 * sizeof(float));
+    outView16[0] = rx;  outView16[4] = ry;  outView16[8]  = rz;  outView16[12] = -rd;
+    outView16[1] = ux;  outView16[5] = uy;  outView16[9]  = uz;  outView16[13] = -ud;
+    outView16[2] = -fx; outView16[6] = -fy; outView16[10] = -fz; outView16[14] = fd;
+    outView16[3] = 0.0f; outView16[7] = 0.0f; outView16[11] = 0.0f; outView16[15] = 1.0f;
 }
 
 RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureConfig& config) {
@@ -2282,29 +2296,74 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
     result.outputDirectory = config.outputDir;
 
     printf("\n========== CaptureSyntheticData START ==========\n");
-    printf("  Sample count : %d\n", config.sampleCount);
-    printf("  Output dir   : %s\n", config.outputDir.c_str());
-    printf("  Camera radius: %.2f\n", config.cameraRadius);
-    printf("  Image size   : %dx%d\n", config.imageWidth, config.imageHeight);
-    printf("  Save mask    : %s\n", config.saveMask ? "YES" : "NO");
-    printf("  Save depth   : %s\n", config.saveDepth ? "YES" : "NO");
+    printf("  Sample count        : %d\n", config.sampleCount);
+    printf("  Output dir          : %s\n", config.outputDir.c_str());
+    printf("  Camera radius       : %.2f\n", config.cameraRadius);
+    printf("  Image size          : %dx%d\n", config.imageWidth, config.imageHeight);
+    printf("  Save mask           : %s\n", config.saveMask ? "YES" : "NO");
+    printf("  Save depth          : %s\n", config.saveDepth ? "YES" : "NO");
+    printf("  Instance seg        : %s\n", config.instanceSegmentation ? "YES" : "NO");
+    printf("  Multi-object scene  : %s\n", config.multiObjectScene ? "YES" : "NO");
+    printf("  Scene objects       : %zu\n", sceneObjects_.size());
     fflush(stdout);
 
-    if (triangleCount == 0) {
-        printf("[CaptureSynthetic] ERROR: No model loaded!\n");
+    bool useMultiObject = config.multiObjectScene && !sceneObjects_.empty();
+
+    if (!useMultiObject && triangleCount == 0) {
+        printf("[CaptureSynthetic] ERROR: No model loaded and no scene objects!\n");
         fflush(stdout);
         return result;
     }
 
-    if (config.saveMask) {
-        computeGeometricFeatures();
-        updateLabelVertexData();
+    if (config.saveMask && !useMultiObject) {
+        if (!config.topologyLabelsPath.empty() && loadTopologyLabels(config.topologyLabelsPath)) {
+            printf("[CaptureSynthetic] Using STEP topology labels as GROUND TRUTH (not curvature)\n");
+            faceCategoryIds = topologyFaceLabels_;
+            faceCategoriesComputed = true;
+            geometricFeaturesComputed = true;
+            updateLabelVertexData();
+        } else {
+            computeGeometricFeatures();
+            updateLabelVertexData();
+        }
+    }
+
+    if (useMultiObject) {
+        bool allHaveTopology = true;
+        for (size_t si = 0; si < sceneObjects_.size(); ++si) {
+            auto& obj = sceneObjects_[si];
+            if (si < config.sceneObjectTopologyPaths.size() &&
+                !config.sceneObjectTopologyPaths[si].empty()) {
+                loadSceneObjectTopologyLabels(obj, config.sceneObjectTopologyPaths[si]);
+            } else if (!config.topologyLabelsPath.empty() && si == 0) {
+                loadSceneObjectTopologyLabels(obj, config.topologyLabelsPath);
+            } else {
+                allHaveTopology = false;
+            }
+        }
+        if (!allHaveTopology) {
+            computeAllFeatureInstances();
+        } else {
+            printf("[CaptureSynthetic] All objects use STEP topology GROUND TRUTH labels\n");
+        }
+    }
+
+    if (config.domainRandomization.enableBackgroundRandomization) {
+        initBackgroundRenderer();
+        if (!config.domainRandomization.backgroundPaths.empty()) {
+            loadBackgroundImages(config.domainRandomization.backgroundPaths);
+        }
+        printf("[CaptureSynthetic] Background randomization: %zu textures + %zu preset colors\n",
+               backgroundTextures_.size(), backgroundColors_.size() / 3);
     }
 
     namespace fs = std::filesystem;
     fs::create_directories(config.outputDir);
     fs::create_directories(config.outputDir + "/rgb");
     if (config.saveMask) {
+        if (config.instanceSegmentation) {
+            fs::create_directories(config.outputDir + "/mask_instance");
+        }
         fs::create_directories(config.outputDir + "/mask");
     }
     if (config.saveDepth) {
@@ -2315,10 +2374,15 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
     float origRot[2] = {cameraRotation[0], cameraRotation[1]};
     float origZoom = zoom;
 
-    SpatialInfo info = getSpatialInfo();
-    float targetX = info.center[0];
-    float targetY = info.center[1];
-    float targetZ = info.center[2];
+    float targetX, targetY, targetZ;
+    if (useMultiObject) {
+        targetX = 0.0f; targetY = 0.0f; targetZ = 0.0f;
+    } else {
+        SpatialInfo info = getSpatialInfo();
+        targetX = info.center[0];
+        targetY = info.center[1];
+        targetZ = info.center[2];
+    }
 
     float origWidth = (float)width;
     float origHeight = (float)height;
@@ -2333,6 +2397,17 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
     std::ostringstream cameraPosesJson;
     cameraPosesJson << "{\n";
 
+    struct PerFramePose {
+        float camR3x3[9];
+        float camT[3];
+        float camK[5];
+        std::vector<float> objPositions;
+        std::vector<float> objRotations;
+        std::vector<float> objScales;
+        std::vector<int> objIds;
+    };
+    std::vector<PerFramePose> framePoses;
+
     float fov = 45.0f;
     float nearPlane = 0.1f;
     float farPlane = 1000.0f;
@@ -2346,6 +2421,10 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
     };
 
     for (int i = 0; i < config.sampleCount; ++i) {
+        if (useMultiObject) {
+            randomizeSceneLayout();
+        }
+
         float camX, camY, camZ;
         sphericalFibonacciSample(i, config.sampleCount, config.cameraRadius,
                                   &camX, &camY, &camZ);
@@ -2353,6 +2432,32 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
         camX += targetX;
         camY += targetY;
         camZ += targetZ;
+
+        float lightAngle = 0.0f;
+        float lightIntensity = 1.0f;
+        float lightColorArr[3] = {1.0f, 1.0f, 1.0f};
+        float camJitterX = 0.0f, camJitterY = 0.0f, camJitterZ = 0.0f;
+        float focalJitter = 0.0f;
+
+        if (config.domainRandomization.enableLightRandomization ||
+            config.domainRandomization.enableCameraJitter) {
+            applyDomainRandomization(config.domainRandomization,
+                                      lightAngle, lightIntensity, lightColorArr,
+                                      camJitterX, camJitterY, camJitterZ, focalJitter);
+        }
+
+        camX += camJitterX;
+        camY += camJitterY;
+        camZ += camJitterZ;
+
+        float jitteredFov = fov + focalJitter;
+        float fj = 1.0f / tanf(jitteredFov * 0.5f * 3.1415926535f / 180.0f);
+        float currentProjection[16] = {
+            fj / aspect, 0.0f, 0.0f, 0.0f,
+            0.0f, fj, 0.0f, 0.0f,
+            0.0f, 0.0f, (farPlane + nearPlane) / (nearPlane - farPlane), -1.0f,
+            0.0f, 0.0f, (2.0f * farPlane * nearPlane) / (nearPlane - farPlane), 0.0f
+        };
 
         cameraPosition[0] = targetX;
         cameraPosition[1] = targetY;
@@ -2371,6 +2476,31 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
                                        targetX, targetY, targetZ,
                                        viewMatrix);
 
+        PerFramePose fp;
+        fp.camR3x3[0] = viewMatrix[0]; fp.camR3x3[1] = viewMatrix[4]; fp.camR3x3[2] = viewMatrix[8];
+        fp.camR3x3[3] = viewMatrix[1]; fp.camR3x3[4] = viewMatrix[5]; fp.camR3x3[5] = viewMatrix[9];
+        fp.camR3x3[6] = viewMatrix[2]; fp.camR3x3[7] = viewMatrix[6]; fp.camR3x3[8] = viewMatrix[10];
+        fp.camT[0] = viewMatrix[12]; fp.camT[1] = viewMatrix[13]; fp.camT[2] = viewMatrix[14];
+        float fj2 = 1.0f / tanf(jitteredFov * 0.5f * 3.1415926535f / 180.0f);
+        fp.camK[0] = config.imageWidth * fj2 * 0.5f;
+        fp.camK[1] = config.imageHeight * fj2 * 0.5f;
+        fp.camK[2] = config.imageWidth * 0.5f;
+        fp.camK[3] = config.imageHeight * 0.5f;
+        fp.camK[4] = jitteredFov;
+        if (useMultiObject) {
+            for (const auto& obj : sceneObjects_) {
+                fp.objPositions.push_back(obj.position[0]);
+                fp.objPositions.push_back(obj.position[1]);
+                fp.objPositions.push_back(obj.position[2]);
+                fp.objRotations.push_back(obj.rotation[0]);
+                fp.objRotations.push_back(obj.rotation[1]);
+                fp.objRotations.push_back(obj.rotation[2]);
+                fp.objScales.push_back(obj.scale);
+                fp.objIds.push_back(obj.instanceId);
+            }
+        }
+        framePoses.push_back(fp);
+
         if (i > 0) cameraPosesJson << ",\n";
         cameraPosesJson << "  \"" << (i + 1) << "\": {\n";
         cameraPosesJson << "    \"position\": [" << camX << ", " << camY << ", " << camZ << "],\n";
@@ -2384,20 +2514,59 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
         cameraPosesJson << "],\n";
         cameraPosesJson << "    \"projection_matrix\": [";
         for (int pi = 0; pi < 16; ++pi) {
-            cameraPosesJson << projectionArr[pi];
+            cameraPosesJson << currentProjection[pi];
             if (pi < 15) cameraPosesJson << ", ";
         }
         cameraPosesJson << "],\n";
-        cameraPosesJson << "    \"fov_degrees\": " << fov << ",\n";
+        cameraPosesJson << "    \"fov_degrees\": " << jitteredFov << ",\n";
         cameraPosesJson << "    \"near_plane\": " << nearPlane << ",\n";
         cameraPosesJson << "    \"far_plane\": " << farPlane << ",\n";
         cameraPosesJson << "    \"image_width\": " << config.imageWidth << ",\n";
-        cameraPosesJson << "    \"image_height\": " << config.imageHeight << "\n";
-        cameraPosesJson << "  }";
+        cameraPosesJson << "    \"image_height\": " << config.imageHeight;
 
-        // === Pass 1: RGB rendering (PBR shader) ===
-        render();
-        swapBuffers();
+        if (useMultiObject) {
+            cameraPosesJson << ",\n    \"scene_objects\": [";
+            for (size_t oi = 0; oi < sceneObjects_.size(); ++oi) {
+                const auto& obj = sceneObjects_[oi];
+                cameraPosesJson << "\n      {\"instance_id\": " << obj.instanceId
+                    << ", \"name\": \"" << obj.name << "\""
+                    << ", \"position\": [" << obj.position[0] << ", " << obj.position[1] << ", " << obj.position[2] << "]"
+                    << ", \"rotation\": [" << obj.rotation[0] << ", " << obj.rotation[1] << ", " << obj.rotation[2] << "]"
+                    << ", \"scale\": " << obj.scale << "}";
+                if (oi < sceneObjects_.size() - 1) cameraPosesJson << ",";
+            }
+            cameraPosesJson << "\n    ]";
+        }
+
+        cameraPosesJson << "\n  }";
+
+        // === Pass 1: RGB rendering ===
+        if (useMultiObject) {
+            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            if (config.domainRandomization.enableBackgroundRandomization) {
+                int bgIdx = selectRandomBackground();
+                if (bgIdx >= 0) renderBackground(bgIdx);
+            }
+
+            glEnable(GL_DEPTH_TEST);
+
+            float lightPos[3] = {camX + lightAngle * 2.0f, camY + 10.0f, camZ};
+            renderSceneRGB(config, viewMatrix, currentProjection, lightPos, lightColorArr, lightIntensity);
+            swapBuffers();
+        } else {
+            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            if (config.domainRandomization.enableBackgroundRandomization) {
+                int bgIdx = selectRandomBackground();
+                if (bgIdx >= 0) renderBackground(bgIdx);
+            }
+
+            render();
+            swapBuffers();
+        }
 
         std::vector<unsigned char> rgbPixels(config.imageWidth * config.imageHeight * 3);
         glReadPixels(0, 0, config.imageWidth, config.imageHeight,
@@ -2413,24 +2582,62 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
             result.failedFrames++;
         }
 
-        // === Pass 2: Mask rendering (label shader) ===
+        // === Pass 2: Mask rendering ===
         if (config.saveMask && labelShaderProgram) {
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            glEnable(GL_DEPTH_TEST);
+            if (useMultiObject && config.instanceSegmentation) {
+                glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                glEnable(GL_DEPTH_TEST);
 
-            renderLabelMode();
-            swapBuffers();
+                renderSceneInstanceMask(config, viewMatrix, currentProjection);
+                swapBuffers();
 
-            std::vector<unsigned char> maskPixels(config.imageWidth * config.imageHeight * 3);
-            glReadPixels(0, 0, config.imageWidth, config.imageHeight,
-                         GL_RGB, GL_UNSIGNED_BYTE, maskPixels.data());
+                std::vector<unsigned char> maskPixels(config.imageWidth * config.imageHeight * 3);
+                glReadPixels(0, 0, config.imageWidth, config.imageHeight,
+                             GL_RGB, GL_UNSIGNED_BYTE, maskPixels.data());
 
-            std::ostringstream maskOss;
-            maskOss << config.outputDir << "/mask/mask_"
-                    << std::setfill('0') << std::setw(4) << (i + 1) << ".png";
+                std::ostringstream maskOss;
+                maskOss << config.outputDir << "/mask_instance/instance_"
+                        << std::setfill('0') << std::setw(4) << (i + 1) << ".png";
 
-            saveFrameAsPNG(maskOss.str(), config.imageWidth, config.imageHeight, maskPixels);
+                saveFrameAsPNG(maskOss.str(), config.imageWidth, config.imageHeight, maskPixels);
+            }
+
+            if (useMultiObject) {
+                glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                glEnable(GL_DEPTH_TEST);
+
+                renderSceneSemanticMask(config, viewMatrix, currentProjection);
+                swapBuffers();
+
+                std::vector<unsigned char> maskPixels(config.imageWidth * config.imageHeight * 3);
+                glReadPixels(0, 0, config.imageWidth, config.imageHeight,
+                             GL_RGB, GL_UNSIGNED_BYTE, maskPixels.data());
+
+                std::ostringstream maskOss;
+                maskOss << config.outputDir << "/mask/mask_"
+                        << std::setfill('0') << std::setw(4) << (i + 1) << ".png";
+
+                saveFrameAsPNG(maskOss.str(), config.imageWidth, config.imageHeight, maskPixels);
+            } else {
+                glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                glEnable(GL_DEPTH_TEST);
+
+                renderLabelMode();
+                swapBuffers();
+
+                std::vector<unsigned char> maskPixels(config.imageWidth * config.imageHeight * 3);
+                glReadPixels(0, 0, config.imageWidth, config.imageHeight,
+                             GL_RGB, GL_UNSIGNED_BYTE, maskPixels.data());
+
+                std::ostringstream maskOss;
+                maskOss << config.outputDir << "/mask/mask_"
+                        << std::setfill('0') << std::setw(4) << (i + 1) << ".png";
+
+                saveFrameAsPNG(maskOss.str(), config.imageWidth, config.imageHeight, maskPixels);
+            }
 
             glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         }
@@ -2441,31 +2648,70 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
             glReadPixels(0, 0, config.imageWidth, config.imageHeight,
                          GL_DEPTH_COMPONENT, GL_FLOAT, depthPixels.data());
 
-            std::vector<unsigned char> depthPng(config.imageWidth * config.imageHeight * 3);
+            std::vector<uint16_t> depth16(config.imageWidth * config.imageHeight);
+            std::vector<float> linearDepthMeters(config.imageWidth * config.imageHeight, 0.0f);
+
+            float depthScale = config.depthScale;
+            if (config.modelUnit == "m") {
+                depthScale = 1000.0f;
+            } else if (config.modelUnit == "cm") {
+                depthScale = 10.0f;
+            } else if (config.modelUnit == "mm") {
+                depthScale = 1.0f;
+            } else if (config.modelUnit == "inch") {
+                depthScale = 1.0f / 25.4f;
+            }
+            float maxLinearDepth = (farPlane > 0 && farPlane < 10000.0f) ? farPlane : 10.0f;
+
             for (int px = 0; px < config.imageWidth * config.imageHeight; ++px) {
-                float d = depthPixels[px];
-                if (d >= 1.0f) d = 1.0f;
-                if (d <= 0.0f) d = 0.0f;
-                unsigned char depthByte = (unsigned char)(d * 255.0f);
-                depthPng[px * 3 + 0] = depthByte;
-                depthPng[px * 3 + 1] = depthByte;
-                depthPng[px * 3 + 2] = depthByte;
+                float zNdc = depthPixels[px];
+                if (zNdc >= 1.0f || zNdc <= 0.0f) {
+                    depth16[px] = 0;
+                    linearDepthMeters[px] = 0.0f;
+                } else {
+                    float zLinear = (2.0f * nearPlane * farPlane) /
+                                    (farPlane + nearPlane - zNdc * (farPlane - nearPlane));
+                    linearDepthMeters[px] = zLinear;
+                    float depthMm = zLinear * depthScale;
+                    if (depthMm > 65535.0f) depthMm = 65535.0f;
+                    depth16[px] = static_cast<uint16_t>(depthMm);
+                }
             }
 
             std::ostringstream depthOss;
             depthOss << config.outputDir << "/depth/depth_"
                      << std::setfill('0') << std::setw(4) << (i + 1) << ".png";
 
-            saveFrameAsPNG(depthOss.str(), config.imageWidth, config.imageHeight, depthPng);
+            std::vector<unsigned char> depthPngBytes(config.imageWidth * config.imageHeight * 2);
+            for (int px = 0; px < config.imageWidth * config.imageHeight; ++px) {
+                depthPngBytes[px * 2 + 0] = static_cast<unsigned char>(depth16[px] & 0xFF);
+                depthPngBytes[px * 2 + 1] = static_cast<unsigned char>((depth16[px] >> 8) & 0xFF);
+            }
+            stbi_write_png(depthOss.str().c_str(), config.imageWidth, config.imageHeight,
+                           2, depthPngBytes.data(), config.imageWidth * 2);
 
             std::ostringstream npyOss;
             npyOss << config.outputDir << "/depth/depth_"
-                   << std::setfill('0') << std::setw(4) << (i + 1) << ".raw";
-            std::ofstream depthFile(npyOss.str(), std::ios::binary);
-            if (depthFile.is_open()) {
-                depthFile.write(reinterpret_cast<const char*>(depthPixels.data()),
-                                depthPixels.size() * sizeof(float));
-                depthFile.close();
+                   << std::setfill('0') << std::setw(4) << (i + 1) << ".npy";
+            std::ofstream npyFile(npyOss.str(), std::ios::binary);
+            if (npyFile.is_open()) {
+                std::string header = "\x93NUMPY\x01\x00";
+                std::ostringstream dictStr;
+                dictStr << "{'descr': '<f4', 'fortran_order': False, 'shape': ("
+                        << config.imageHeight << ", " << config.imageWidth << ")}";
+                std::string dict = dictStr.str();
+                int headerLen = (int)dict.size() + 10;
+                int padding = 64 - (headerLen % 64);
+                if (padding < 1) padding += 64;
+                dict.append(padding, ' ');
+                dict.back() = '\n';
+                uint16_t hLen = (uint16_t)dict.size();
+                header += std::string((char*)&hLen, 2);
+                header += dict;
+                npyFile.write(header.data(), header.size());
+                npyFile.write(reinterpret_cast<const char*>(linearDepthMeters.data()),
+                              linearDepthMeters.size() * sizeof(float));
+                npyFile.close();
             }
         }
 
@@ -2487,6 +2733,75 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
             posesFile << cameraPosesJson.str();
             posesFile.close();
             printf("[CaptureSynthetic] Camera poses saved to: %s\n", posesPath.c_str());
+        }
+    }
+
+    if (useMultiObject) {
+        std::ostringstream manifestJson;
+        manifestJson << "{\n";
+        manifestJson << "  \"scene_type\": \"multi_object\",\n";
+        manifestJson << "  \"instance_segmentation\": " << (config.instanceSegmentation ? "true" : "false") << ",\n";
+        manifestJson << "  \"total_frames\": " << config.sampleCount << ",\n";
+        manifestJson << "  \"objects\": [\n";
+        for (size_t oi = 0; oi < sceneObjects_.size(); ++oi) {
+            const auto& obj = sceneObjects_[oi];
+            manifestJson << "    {\n";
+            manifestJson << "      \"instance_id\": " << obj.instanceId << ",\n";
+            manifestJson << "      \"name\": \"" << obj.name << "\",\n";
+            manifestJson << "      \"file_path\": \"" << obj.filePath << "\",\n";
+            manifestJson << "      \"triangle_count\": " << obj.triangleCount << ",\n";
+            manifestJson << "      \"position\": [" << obj.position[0] << ", " << obj.position[1] << ", " << obj.position[2] << "],\n";
+            manifestJson << "      \"rotation\": [" << obj.rotation[0] << ", " << obj.rotation[1] << ", " << obj.rotation[2] << "],\n";
+            manifestJson << "      \"scale\": " << obj.scale << ",\n";
+
+            std::unordered_map<int, std::vector<int>> featureGroups;
+            for (size_t fi = 0; fi < obj.faceCategoryIds.size(); ++fi) {
+                int catId = obj.faceCategoryIds[fi];
+                int featIdx = (fi < obj.featureInstanceIds.size()) ? obj.featureInstanceIds[fi] : 0;
+                if (catId != 0 && catId != 7) {
+                    featureGroups[catId].push_back(featIdx);
+                }
+            }
+
+            manifestJson << "      \"features\": [\n";
+            const char* categoryNames[] = {
+                "FreeSurface", "HorizontalPlane", "LateralPlane_X",
+                "LateralPlane_Z", "NearHorizontal", "NearLateral_X",
+                "NearLateral_Z", "Degenerate", "ConvexFeature_Bolt",
+                "ConcaveFeature_Hole", "Flange", "Boss"
+            };
+            bool firstFeature = true;
+            for (const auto& [catId, instances] : featureGroups) {
+                if (!firstFeature) manifestJson << ",\n";
+                firstFeature = false;
+                std::set<int> uniqueInstances(instances.begin(), instances.end());
+                manifestJson << "        {\"feature_type\": \"" << categoryNames[catId] << "\""
+                    << ", \"feature_type_id\": " << catId
+                    << ", \"instance_count\": " << uniqueInstances.size()
+                    << ", \"instance_ids\": [";
+                size_t ii = 0;
+                for (int inst : uniqueInstances) {
+                    manifestJson << inst;
+                    if (ii < uniqueInstances.size() - 1) manifestJson << ", ";
+                    ii++;
+                }
+                manifestJson << "]}";
+            }
+            manifestJson << "\n      ]\n";
+            manifestJson << "    }";
+            if (oi < sceneObjects_.size() - 1) manifestJson << ",";
+            manifestJson << "\n";
+        }
+        manifestJson << "  ],\n";
+        manifestJson << "  \"hierarchy\": \"Scene -> Object -> Feature_Instance\"\n";
+        manifestJson << "}\n";
+
+        std::string manifestPath = config.outputDir + "/manifest.json";
+        std::ofstream manifestFile(manifestPath);
+        if (manifestFile.is_open()) {
+            manifestFile << manifestJson.str();
+            manifestFile.close();
+            printf("[CaptureSynthetic] Manifest saved to: %s\n", manifestPath.c_str());
         }
     }
 
@@ -2523,8 +2838,197 @@ RenderManager::CaptureResult RenderManager::captureSyntheticData(const CaptureCo
                 legendFile << c << " " << categoryNames[c] << " "
                            << (int)(r * 255) << " " << (int)(g * 255) << " " << (int)(b * 255) << "\n";
             }
+
+            if (config.instanceSegmentation) {
+                legendFile << "\n# Instance Segmentation Encoding\n";
+                legendFile << "# Pixel (R, G, B) = (InstanceID, FeatureTypeID, FeatureIndex)\n";
+                legendFile << "# InstanceID: unique per object in scene (1-255)\n";
+                legendFile << "# FeatureTypeID: semantic category (0-11)\n";
+                legendFile << "# FeatureIndex: instance index within that feature type\n";
+            }
+
             legendFile.close();
             printf("[CaptureSynthetic] Label legend saved to: %s\n", legendPath.c_str());
+        }
+    }
+
+    if (config.outputBOPFormat) {
+        printf("[CaptureSynthetic] Generating BOP format output...\n");
+        fflush(stdout);
+
+        float bopDepthScale = config.depthScale;
+        if (config.modelUnit == "m") {
+            bopDepthScale = 1000.0f;
+        } else if (config.modelUnit == "cm") {
+            bopDepthScale = 10.0f;
+        } else if (config.modelUnit == "mm") {
+            bopDepthScale = 1.0f;
+        } else if (config.modelUnit == "inch") {
+            bopDepthScale = 1.0f / 25.4f;
+        }
+
+        std::ostringstream sceneCameraJson;
+        sceneCameraJson << "{\n";
+        std::ostringstream sceneGtJson;
+        sceneGtJson << "{\n";
+
+        for (int i = 0; i < config.sampleCount && i < (int)framePoses.size(); ++i) {
+            const auto& fp = framePoses[i];
+
+            if (i > 0) sceneCameraJson << ",\n";
+            sceneCameraJson << "  \"" << (i + 1) << "\": {\n";
+            sceneCameraJson << "    \"cam_K\": [" << fp.camK[0] << ", 0.0, " << fp.camK[2] << ", 0.0, " << fp.camK[1] << ", " << fp.camK[3] << ", 0.0, 0.0, 1.0],\n";
+            sceneCameraJson << "    \"depth_scale\": " << bopDepthScale << ",\n";
+            sceneCameraJson << "    \"model_unit\": \"" << config.modelUnit << "\",\n";
+            sceneCameraJson << "    \"cam_R_w2c\": [" << fp.camR3x3[0];
+            for (int ri = 1; ri < 9; ++ri) sceneCameraJson << ", " << fp.camR3x3[ri];
+            sceneCameraJson << "],\n";
+            sceneCameraJson << "    \"cam_t_w2c\": [" << fp.camT[0] << ", " << fp.camT[1] << ", " << fp.camT[2] << "]\n";
+            sceneCameraJson << "  }";
+
+            if (useMultiObject && !fp.objIds.empty()) {
+                if (i > 0) sceneGtJson << ",\n";
+                sceneGtJson << "  \"" << (i + 1) << "\": [";
+                for (size_t oi = 0; oi < fp.objIds.size(); ++oi) {
+                    float rx = fp.objRotations[oi * 3 + 0];
+                    float ry = fp.objRotations[oi * 3 + 1];
+                    float rz = fp.objRotations[oi * 3 + 2];
+                    float cosRx = cosf(rx), sinRx = sinf(rx);
+                    float cosRy = cosf(ry), sinRy = sinf(ry);
+                    float cosRz = cosf(rz), sinRz = sinf(rz);
+                    float Robj[9] = {
+                        cosRy*cosRz, -cosRy*sinRz, sinRy,
+                        sinRx*sinRy*cosRz + cosRx*sinRz, -sinRx*sinRy*sinRz + cosRx*cosRz, -sinRx*cosRy,
+                        -cosRx*sinRy*cosRz + sinRx*sinRz, cosRx*sinRy*sinRz + sinRx*cosRz, cosRx*cosRy
+                    };
+                    float tObj[3] = { fp.objPositions[oi * 3 + 0], fp.objPositions[oi * 3 + 1], fp.objPositions[oi * 3 + 2] };
+                    if (oi > 0) sceneGtJson << ",";
+                    sceneGtJson << "\n    {\"obj_id\": " << fp.objIds[oi]
+                        << ", \"cam_R_m2c\": [" << Robj[0];
+                    for (int ri = 1; ri < 9; ++ri) sceneGtJson << ", " << Robj[ri];
+                    sceneGtJson << "], \"cam_t_m2c\": [" << tObj[0] << ", " << tObj[1] << ", " << tObj[2] << "]";
+                    sceneGtJson << "}";
+                }
+                sceneGtJson << "\n  ]";
+            } else if (!useMultiObject) {
+                if (i > 0) sceneGtJson << ",\n";
+                sceneGtJson << "  \"" << (i + 1) << "\": [\n";
+                sceneGtJson << "    {\"obj_id\": 1, \"cam_R_m2c\": [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], \"cam_t_m2c\": [0.0, 0.0, 0.0]}\n";
+                sceneGtJson << "  ]";
+            }
+        }
+
+        sceneCameraJson << "\n}\n";
+        sceneGtJson << "\n}\n";
+
+        std::string bopCameraPath = config.outputDir + "/scene_camera.json";
+        std::ofstream bopCameraFile(bopCameraPath);
+        if (bopCameraFile.is_open()) {
+            bopCameraFile << sceneCameraJson.str();
+            bopCameraFile.close();
+            printf("[CaptureSynthetic] BOP scene_camera.json saved\n");
+        }
+
+        {
+            std::string bopGtPath = config.outputDir + "/scene_gt.json";
+            std::ofstream bopGtFile(bopGtPath);
+            if (bopGtFile.is_open()) {
+                bopGtFile << sceneGtJson.str();
+                bopGtFile.close();
+                printf("[CaptureSynthetic] BOP scene_gt.json saved (6DoF poses, %s mode)\n",
+                       useMultiObject ? "multi-object" : "single-object");
+            }
+        }
+
+        std::ostringstream gt6dofJson;
+        gt6dofJson << "{\n";
+        gt6dofJson << "  \"description\": \"6DoF Ground Truth - Object poses per frame\",\n";
+        gt6dofJson << "  \"frame_count\": " << config.sampleCount << ",\n";
+        gt6dofJson << "  \"object_count\": " << (useMultiObject ? sceneObjects_.size() : 1) << ",\n";
+        gt6dofJson << "  \"frames\": [\n";
+        for (int i = 0; i < config.sampleCount && i < (int)framePoses.size(); ++i) {
+            const auto& fp = framePoses[i];
+            if (i > 0) gt6dofJson << ",\n";
+            gt6dofJson << "    {\n";
+            gt6dofJson << "      \"frame_id\": " << (i + 1) << ",\n";
+            gt6dofJson << "      \"objects\": [\n";
+
+            auto writeObjPose = [&](int objId, const char* objName,
+                                     float px, float py, float pz,
+                                     float rx, float ry, float rz, float s) {
+                float cosRx = cosf(rx), sinRx = sinf(rx);
+                float cosRy = cosf(ry), sinRy = sinf(ry);
+                float cosRz = cosf(rz), sinRz = sinf(rz);
+                float R00 = cosRy*cosRz, R01 = -cosRy*sinRz, R02 = sinRy;
+                float R10 = sinRx*sinRy*cosRz + cosRx*sinRz;
+                float R11 = -sinRx*sinRy*sinRz + cosRx*cosRz;
+                float R12 = -sinRx*cosRy;
+                float R20 = -cosRx*sinRy*cosRz + sinRx*sinRz;
+                float R21 = cosRx*sinRy*sinRz + sinRx*cosRz;
+                float R22 = cosRx*cosRy;
+                float trace = R00 + R11 + R22;
+                float qw, qx, qy, qz;
+                if (trace > 0) {
+                    float s2 = sqrtf(trace + 1.0f) * 2.0f;
+                    qw = 0.25f * s2;
+                    qx = (R12 - R21) / s2;
+                    qy = (R20 - R02) / s2;
+                    qz = (R01 - R10) / s2;
+                } else if (R00 > R11 && R00 > R22) {
+                    float s2 = sqrtf(1.0f + R00 - R11 - R22) * 2.0f;
+                    qw = (R12 - R21) / s2;
+                    qx = 0.25f * s2;
+                    qy = (R01 + R10) / s2;
+                    qz = (R02 + R20) / s2;
+                } else if (R11 > R22) {
+                    float s2 = sqrtf(1.0f + R11 - R00 - R22) * 2.0f;
+                    qw = (R20 - R02) / s2;
+                    qx = (R01 + R10) / s2;
+                    qy = 0.25f * s2;
+                    qz = (R12 + R21) / s2;
+                } else {
+                    float s2 = sqrtf(1.0f + R22 - R00 - R11) * 2.0f;
+                    qw = (R01 - R10) / s2;
+                    qx = (R02 + R20) / s2;
+                    qy = (R12 + R21) / s2;
+                    qz = 0.25f * s2;
+                }
+                gt6dofJson << "        {\"obj_id\": " << objId
+                    << ", \"name\": \"" << objName << "\""
+                    << ", \"translation\": [" << px << ", " << py << ", " << pz << "]"
+                    << ", \"rotation_euler\": [" << rx << ", " << ry << ", " << rz << "]"
+                    << ", \"rotation_quaternion\": [" << qx << ", " << qy << ", " << qz << ", " << qw << "]"
+                    << ", \"scale\": " << s
+                    << ", \"rotation_matrix_3x3\": ["
+                    << R00 << ", " << R01 << ", " << R02 << ", "
+                    << R10 << ", " << R11 << ", " << R12 << ", "
+                    << R20 << ", " << R21 << ", " << R22 << "]"
+                    << "}";
+            };
+
+            if (useMultiObject && !fp.objIds.empty()) {
+                for (size_t oi = 0; oi < fp.objIds.size(); ++oi) {
+                    if (oi > 0) gt6dofJson << ",";
+                    gt6dofJson << "\n";
+                    writeObjPose(fp.objIds[oi], "object",
+                                 fp.objPositions[oi * 3 + 0], fp.objPositions[oi * 3 + 1], fp.objPositions[oi * 3 + 2],
+                                 fp.objRotations[oi * 3 + 0], fp.objRotations[oi * 3 + 1], fp.objRotations[oi * 3 + 2],
+                                 fp.objScales[oi]);
+                }
+            } else {
+                gt6dofJson << "\n";
+                writeObjPose(1, "primary_object", 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+            }
+            gt6dofJson << "\n      ]\n    }";
+        }
+        gt6dofJson << "\n  ]\n}\n";
+
+        std::string gt6dofPath = config.outputDir + "/gt_6dof.json";
+        std::ofstream gt6dofFile(gt6dofPath);
+        if (gt6dofFile.is_open()) {
+            gt6dofFile << gt6dofJson.str();
+            gt6dofFile.close();
+            printf("[CaptureSynthetic] 6DoF Ground Truth saved to: %s\n", gt6dofPath.c_str());
         }
     }
 
@@ -2867,6 +3371,1240 @@ RenderManager::SpatialInfo RenderManager::getSpatialInfo() {
     info.currentZoom = zoom;
     
     return info;
+}
+
+void RenderManager::instanceColorEncode(int instanceId, int featureTypeId, int featureIndex,
+                                          float* outR, float* outG, float* outB) {
+    int clampedInstance = (instanceId > 0 && instanceId < 256) ? instanceId : 0;
+    int clampedFeature = (featureTypeId >= 0 && featureTypeId < 256) ? featureTypeId : 0;
+    int clampedIndex = (featureIndex >= 0 && featureIndex < 256) ? featureIndex : 0;
+    *outR = clampedInstance / 255.0f;
+    *outG = clampedFeature / 255.0f;
+    *outB = clampedIndex / 255.0f;
+}
+
+void RenderManager::instanceColorDecode(unsigned char r, unsigned char g, unsigned char b,
+                                          int& instanceId, int& featureTypeId, int& featureIndex) {
+    instanceId = static_cast<int>(r);
+    featureTypeId = static_cast<int>(g);
+    featureIndex = static_cast<int>(b);
+}
+
+bool RenderManager::addSceneObject(const std::string& filePath, const std::string& name) {
+    SceneObject obj;
+    obj.instanceId = static_cast<int>(sceneObjects_.size()) + 1;
+    obj.name = name.empty() ? "Object_" + std::to_string(obj.instanceId) : name;
+    obj.filePath = filePath;
+
+    if (!loadSceneObjectGeometry(obj)) {
+        printf("[SceneManager] Failed to load geometry for: %s\n", filePath.c_str());
+        fflush(stdout);
+        return false;
+    }
+
+    computeSceneObjectBounds(obj);
+    computeSceneObjectFeatures(obj);
+
+    uploadSceneObjectGPU(obj);
+
+    sceneObjects_.push_back(std::move(obj));
+
+    printf("[SceneManager] Added object #%d: %s (%zu triangles)\n",
+           sceneObjects_.back().instanceId, sceneObjects_.back().name.c_str(),
+           sceneObjects_.back().triangleCount);
+    fflush(stdout);
+    return true;
+}
+
+void RenderManager::clearSceneObjects() {
+    for (auto& obj : sceneObjects_) {
+        if (obj.VAO) { glDeleteVertexArrays(1, &obj.VAO); obj.VAO = 0; }
+        if (obj.VBO) { glDeleteBuffers(1, &obj.VBO); obj.VBO = 0; }
+        if (obj.labelVAO) { glDeleteVertexArrays(1, &obj.labelVAO); obj.labelVAO = 0; }
+        if (obj.labelVBO) { glDeleteBuffers(1, &obj.labelVBO); obj.labelVBO = 0; }
+    }
+    sceneObjects_.clear();
+}
+
+bool RenderManager::loadSceneObjectGeometry(SceneObject& obj) {
+    hhb::core::StlParser parser;
+    hhb::core::ParserResult result = parser.parse(obj.filePath, *obj.trianglePool);
+    if (!result.success) {
+        printf("[SceneObject] Failed to load: %s\n", obj.filePath.c_str());
+        fflush(stdout);
+        return false;
+    }
+
+    obj.triangleCount = 0;
+    obj.trianglePtrs.clear();
+    obj.vertexData.clear();
+
+    obj.trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        obj.trianglePtrs.push_back(tri);
+        obj.triangleCount++;
+
+        float* verts[3] = {tri->vertex1, tri->vertex2, tri->vertex3};
+        for (int v = 0; v < 3; ++v) {
+            obj.vertexData.push_back(verts[v][0]);
+            obj.vertexData.push_back(verts[v][1]);
+            obj.vertexData.push_back(verts[v][2]);
+            obj.vertexData.push_back(tri->normal[0]);
+            obj.vertexData.push_back(tri->normal[1]);
+            obj.vertexData.push_back(tri->normal[2]);
+        }
+    });
+
+    printf("[SceneObject] Loaded %zu triangles from %s\n", obj.triangleCount, obj.filePath.c_str());
+    fflush(stdout);
+    return true;
+}
+
+void RenderManager::computeSceneObjectBounds(SceneObject& obj) {
+    obj.bounds[0] = obj.bounds[1] = obj.bounds[2] = 1e9f;
+    obj.bounds[3] = obj.bounds[4] = obj.bounds[5] = -1e9f;
+
+    obj.trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        float* verts[3] = {tri->vertex1, tri->vertex2, tri->vertex3};
+        for (int v = 0; v < 3; ++v) {
+            for (int ax = 0; ax < 3; ++ax) {
+                obj.bounds[ax] = std::min(obj.bounds[ax], verts[v][ax]);
+                obj.bounds[ax + 3] = std::max(obj.bounds[ax + 3], verts[v][ax]);
+            }
+        }
+    });
+
+    obj.center[0] = (obj.bounds[0] + obj.bounds[3]) * 0.5f;
+    obj.center[1] = (obj.bounds[1] + obj.bounds[4]) * 0.5f;
+    obj.center[2] = (obj.bounds[2] + obj.bounds[5]) * 0.5f;
+
+    float dx = obj.bounds[3] - obj.bounds[0];
+    float dy = obj.bounds[4] - obj.bounds[1];
+    float dz = obj.bounds[5] - obj.bounds[2];
+    obj.maxDim = std::max({dx, dy, dz});
+}
+
+void RenderManager::computeSceneObjectFeatures(SceneObject& obj) {
+    if (obj.triangleCount == 0) return;
+
+    obj.faceCategoryIds.resize(obj.triangleCount, 0);
+    obj.featureInstanceIds.resize(obj.triangleCount, 0);
+    obj.categoriesComputed = false;
+
+    struct VertexInfo {
+        float normal[3] = {0, 0, 0};
+        float areaSum = 0.0f;
+        int valence = 0;
+        float pos[3] = {0, 0, 0};
+    };
+
+    auto vertexKey = [](float x, float y, float z) -> int64_t {
+        int ix = (int)(x * 10000.0f);
+        int iy = (int)(y * 10000.0f);
+        int iz = (int)(z * 10000.0f);
+        return ((int64_t)(ix & 0xFFFFF) << 40) | ((int64_t)(iy & 0xFFFFF) << 20) | (int64_t)(iz & 0xFFFFF);
+    };
+
+    std::unordered_map<int64_t, VertexInfo> vertexMap;
+
+    obj.trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        float e1[3] = {tri->vertex2[0] - tri->vertex1[0],
+                        tri->vertex2[1] - tri->vertex1[1],
+                        tri->vertex2[2] - tri->vertex1[2]};
+        float e2[3] = {tri->vertex3[0] - tri->vertex1[0],
+                        tri->vertex3[1] - tri->vertex1[1],
+                        tri->vertex3[2] - tri->vertex1[2]};
+        float cross[3] = {
+            e1[1] * e2[2] - e1[2] * e2[1],
+            e1[2] * e2[0] - e1[0] * e2[2],
+            e1[0] * e2[1] - e1[1] * e2[0]
+        };
+        float area = 0.5f * std::sqrt(cross[0]*cross[0] + cross[1]*cross[1] + cross[2]*cross[2]);
+
+        float nx = tri->normal[0], ny = tri->normal[1], nz = tri->normal[2];
+        float nLen = std::sqrt(nx*nx + ny*ny + nz*nz);
+        if (nLen > 0.0001f) { nx /= nLen; ny /= nLen; nz /= nLen; }
+
+        int64_t keys[3] = {
+            vertexKey(tri->vertex1[0], tri->vertex1[1], tri->vertex1[2]),
+            vertexKey(tri->vertex2[0], tri->vertex2[1], tri->vertex2[2]),
+            vertexKey(tri->vertex3[0], tri->vertex3[1], tri->vertex3[2])
+        };
+        float* verts[3] = {tri->vertex1, tri->vertex2, tri->vertex3};
+
+        for (int v = 0; v < 3; ++v) {
+            auto& info = vertexMap[keys[v]];
+            info.normal[0] += nx * area;
+            info.normal[1] += ny * area;
+            info.normal[2] += nz * area;
+            info.areaSum += area;
+            info.valence++;
+            info.pos[0] = verts[v][0];
+            info.pos[1] = verts[v][1];
+            info.pos[2] = verts[v][2];
+        }
+    });
+
+    for (auto& [key, info] : vertexMap) {
+        if (info.areaSum > 0.00001f) {
+            info.normal[0] /= info.areaSum;
+            info.normal[1] /= info.areaSum;
+            info.normal[2] /= info.areaSum;
+            float nLen = std::sqrt(info.normal[0]*info.normal[0] +
+                                    info.normal[1]*info.normal[1] +
+                                    info.normal[2]*info.normal[2]);
+            if (nLen > 0.0001f) {
+                info.normal[0] /= nLen;
+                info.normal[1] /= nLen;
+                info.normal[2] /= nLen;
+            }
+        }
+    }
+
+    std::vector<float> faceMeanCurv(obj.triangleCount, 0.0f);
+    std::vector<float> faceGaussCurv(obj.triangleCount, 0.0f);
+    std::vector<int> faceCurvIds(obj.triangleCount, 0);
+
+    size_t idx = 0;
+    obj.trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        if (idx >= obj.triangleCount) return;
+
+        int64_t keys[3] = {
+            vertexKey(tri->vertex1[0], tri->vertex1[1], tri->vertex1[2]),
+            vertexKey(tri->vertex2[0], tri->vertex2[1], tri->vertex2[2]),
+            vertexKey(tri->vertex3[0], tri->vertex3[1], tri->vertex3[2])
+        };
+
+        float e1[3] = {tri->vertex2[0] - tri->vertex1[0],
+                        tri->vertex2[1] - tri->vertex1[1],
+                        tri->vertex2[2] - tri->vertex1[2]};
+        float e2[3] = {tri->vertex3[0] - tri->vertex1[0],
+                        tri->vertex3[1] - tri->vertex1[1],
+                        tri->vertex3[2] - tri->vertex1[2]};
+        float cross[3] = {
+            e1[1] * e2[2] - e1[2] * e2[1],
+            e1[2] * e2[0] - e1[0] * e2[2],
+            e1[0] * e2[1] - e1[1] * e2[0]
+        };
+        float area = 0.5f * std::sqrt(cross[0]*cross[0] + cross[1]*cross[1] + cross[2]*cross[2]);
+
+        float meanCurv = 0.0f;
+        if (area > 0.00001f) {
+            for (int v = 0; v < 3; ++v) {
+                auto it = vertexMap.find(keys[v]);
+                if (it != vertexMap.end()) {
+                    float dx = it->second.pos[0] - tri->vertex1[0];
+                    float dy = it->second.pos[1] - tri->vertex1[1];
+                    float dz = it->second.pos[2] - tri->vertex1[2];
+                    float dist = std::sqrt(dx*dx + dy*dy + dz*dz);
+                    float dotProd = it->second.normal[0] * tri->normal[0] +
+                                    it->second.normal[1] * tri->normal[1] +
+                                    it->second.normal[2] * tri->normal[2];
+                    float angle = std::acos(std::max(-1.0f, std::min(1.0f, dotProd)));
+                    meanCurv += angle / dist;
+                }
+            }
+            meanCurv /= (3.0f * area);
+        }
+
+        float gaussianCurv = 0.0f;
+        if (area > 0.00001f) {
+            float angleSum = 0.0f;
+            for (int v = 0; v < 3; ++v) {
+                auto it = vertexMap.find(keys[v]);
+                if (it != vertexMap.end() && it->second.valence > 0) {
+                    angleSum += 2.0f * 3.14159265f / it->second.valence;
+                }
+            }
+            gaussianCurv = (angleSum - 3.14159265f) / area;
+        }
+
+        faceMeanCurv[idx] = meanCurv;
+        faceGaussCurv[idx] = gaussianCurv;
+
+        float absMean = std::abs(meanCurv);
+        float absGauss = std::abs(gaussianCurv);
+
+        if (absMean < 0.5f && absGauss < 0.5f) {
+            faceCurvIds[idx] = 0;
+        } else if (absGauss > 2.0f && gaussianCurv > 0) {
+            faceCurvIds[idx] = 1;
+        } else if (absGauss > 2.0f && gaussianCurv < 0) {
+            faceCurvIds[idx] = 2;
+        } else if (absMean > 1.0f && meanCurv > 0) {
+            faceCurvIds[idx] = 3;
+        } else if (absMean > 1.0f && meanCurv < 0) {
+            faceCurvIds[idx] = 4;
+        } else {
+            faceCurvIds[idx] = 5;
+        }
+
+        idx++;
+    });
+
+    struct EdgeKey {
+        int64_t v0, v1;
+        bool operator==(const EdgeKey& o) const { return v0 == o.v0 && v1 == o.v1; }
+    };
+    struct EdgeKeyHash {
+        size_t operator()(const EdgeKey& k) const { return std::hash<int64_t>()(k.v0) ^ (std::hash<int64_t>()(k.v1) << 1); }
+    };
+
+    auto makeEdge = [](int64_t a, int64_t b) -> EdgeKey {
+        return a < b ? EdgeKey{a, b} : EdgeKey{b, a};
+    };
+
+    std::unordered_map<EdgeKey, std::vector<int>, EdgeKeyHash> edgeToTriangles;
+    std::vector<int64_t> triVertexKeys(obj.triangleCount * 3);
+
+    idx = 0;
+    obj.trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        if (idx >= obj.triangleCount) return;
+
+        int64_t k1 = vertexKey(tri->vertex1[0], tri->vertex1[1], tri->vertex1[2]);
+        int64_t k2 = vertexKey(tri->vertex2[0], tri->vertex2[1], tri->vertex2[2]);
+        int64_t k3 = vertexKey(tri->vertex3[0], tri->vertex3[1], tri->vertex3[2]);
+
+        triVertexKeys[idx * 3 + 0] = k1;
+        triVertexKeys[idx * 3 + 1] = k2;
+        triVertexKeys[idx * 3 + 2] = k3;
+
+        edgeToTriangles[makeEdge(k1, k2)].push_back((int)idx);
+        edgeToTriangles[makeEdge(k2, k3)].push_back((int)idx);
+        edgeToTriangles[makeEdge(k1, k3)].push_back((int)idx);
+
+        idx++;
+    });
+
+    std::vector<bool> visited(obj.triangleCount, false);
+    std::vector<std::vector<int>> clusters;
+
+    for (size_t start = 0; start < obj.triangleCount; ++start) {
+        if (visited[start]) continue;
+
+        int curvId = faceCurvIds[start];
+        std::vector<int> cluster;
+        std::vector<int> stack;
+        stack.push_back((int)start);
+
+        while (!stack.empty()) {
+            int triIdx = stack.back();
+            stack.pop_back();
+            if (triIdx < 0 || triIdx >= (int)obj.triangleCount || visited[triIdx]) continue;
+            if (faceCurvIds[triIdx] != curvId) continue;
+
+            visited[triIdx] = true;
+            cluster.push_back(triIdx);
+
+            int64_t k1 = triVertexKeys[triIdx * 3 + 0];
+            int64_t k2 = triVertexKeys[triIdx * 3 + 1];
+            int64_t k3 = triVertexKeys[triIdx * 3 + 2];
+
+            auto addNeighbors = [&](int64_t a, int64_t b) {
+                EdgeKey ek = makeEdge(a, b);
+                auto it = edgeToTriangles.find(ek);
+                if (it != edgeToTriangles.end()) {
+                    for (int nIdx : it->second) {
+                        if (!visited[nIdx] && faceCurvIds[nIdx] == curvId) {
+                            stack.push_back(nIdx);
+                        }
+                    }
+                }
+            };
+
+            addNeighbors(k1, k2);
+            addNeighbors(k2, k3);
+            addNeighbors(k1, k3);
+        }
+
+        if (!cluster.empty()) {
+            clusters.push_back(std::move(cluster));
+        }
+    }
+
+    printf("[SceneObjFeature] Object '%s': %zu curvature clusters from %zu triangles\n",
+           obj.name.c_str(), clusters.size(), obj.triangleCount);
+
+    for (auto& cluster : clusters) {
+        float totalArea = 0.0f;
+        float avgMeanCurv = 0;
+        float avgGaussCurv = 0;
+        int boundaryEdges = 0;
+
+        std::unordered_set<int> clusterSet(cluster.begin(), cluster.end());
+
+        for (int triIdx : cluster) {
+            float e1[3], e2[3];
+            size_t localIdx = 0;
+            obj.trianglePool->for_each([&](hhb::core::Triangle* tri) {
+                if (localIdx != (size_t)triIdx) { localIdx++; return; }
+                e1[0] = tri->vertex2[0] - tri->vertex1[0];
+                e1[1] = tri->vertex2[1] - tri->vertex1[1];
+                e1[2] = tri->vertex2[2] - tri->vertex1[2];
+                e2[0] = tri->vertex3[0] - tri->vertex1[0];
+                e2[1] = tri->vertex3[1] - tri->vertex1[1];
+                e2[2] = tri->vertex3[2] - tri->vertex1[2];
+                localIdx++;
+            });
+
+            float cross[3] = {
+                e1[1]*e2[2] - e1[2]*e2[1],
+                e1[2]*e2[0] - e1[0]*e2[2],
+                e1[0]*e2[1] - e1[1]*e2[0]
+            };
+            float area = 0.5f * std::sqrt(cross[0]*cross[0] + cross[1]*cross[1] + cross[2]*cross[2]);
+            totalArea += area;
+            avgMeanCurv += faceMeanCurv[triIdx];
+            avgGaussCurv += faceGaussCurv[triIdx];
+
+            int64_t k1 = triVertexKeys[triIdx * 3 + 0];
+            int64_t k2 = triVertexKeys[triIdx * 3 + 1];
+            int64_t k3 = triVertexKeys[triIdx * 3 + 2];
+
+            auto checkBoundary = [&](int64_t a, int64_t b) {
+                EdgeKey ek = makeEdge(a, b);
+                auto it = edgeToTriangles.find(ek);
+                if (it != edgeToTriangles.end() && it->second.size() == 1) {
+                    boundaryEdges++;
+                } else if (it != edgeToTriangles.end()) {
+                    bool hasExternal = false;
+                    for (int nIdx : it->second) {
+                        if (clusterSet.find(nIdx) == clusterSet.end()) {
+                            hasExternal = true;
+                            break;
+                        }
+                    }
+                    if (hasExternal) boundaryEdges++;
+                }
+            };
+            checkBoundary(k1, k2);
+            checkBoundary(k2, k3);
+            checkBoundary(k1, k3);
+        }
+
+        if (cluster.empty()) continue;
+        avgMeanCurv /= cluster.size();
+        avgGaussCurv /= cluster.size();
+
+        int featureCategory = 0;
+
+        if (cluster.size() < 5) {
+            featureCategory = 0;
+        }
+        else if (avgGaussCurv > 1.5f && avgMeanCurv > 0.5f && totalArea < 0.5f) {
+            featureCategory = 8;
+        }
+        else if (avgGaussCurv > 1.5f && avgMeanCurv < -0.5f && totalArea < 0.3f) {
+            featureCategory = 9;
+        }
+        else if (avgMeanCurv < -1.0f && boundaryEdges >= 3) {
+            featureCategory = 10;
+        }
+        else if (avgMeanCurv > 1.0f && totalArea > 0.1f && totalArea < 2.0f) {
+            featureCategory = 11;
+        }
+        else if (std::abs(avgMeanCurv) < 0.5f && std::abs(avgGaussCurv) < 0.5f) {
+            featureCategory = 1;
+        }
+        else {
+            featureCategory = 0;
+        }
+
+        for (int triIdx : cluster) {
+            obj.faceCategoryIds[triIdx] = featureCategory;
+        }
+    }
+
+    std::unordered_map<int, int> categoryInstanceIndex;
+    for (size_t fi = 0; fi < obj.triangleCount; ++fi) {
+        int catId = obj.faceCategoryIds[fi];
+        if (catId == 0 || catId == 7) {
+            obj.featureInstanceIds[fi] = 0;
+        } else {
+            obj.featureInstanceIds[fi] = ++categoryInstanceIndex[catId];
+        }
+    }
+
+    obj.categoriesComputed = true;
+    printf("[SceneObjFeature] Object '%s': feature classification complete\n", obj.name.c_str());
+    fflush(stdout);
+}
+
+void RenderManager::computeAllFeatureInstances() {
+    for (auto& obj : sceneObjects_) {
+        if (!obj.categoriesComputed) {
+            computeSceneObjectFeatures(obj);
+        }
+    }
+}
+
+bool RenderManager::loadTopologyLabels(const std::string& jsonPath) {
+    std::ifstream file(jsonPath);
+    if (!file.is_open()) {
+        printf("[TopologyLabels] ERROR: Cannot open %s\n", jsonPath.c_str());
+        fflush(stdout);
+        return false;
+    }
+
+    std::string content((std::istreambuf_iterator<char>(file)),
+                         std::istreambuf_iterator<char>());
+    file.close();
+
+    auto skipWS = [](const std::string& s, size_t& pos) {
+        while (pos < s.size() && (s[pos] == ' ' || s[pos] == '\t' || s[pos] == '\n' || s[pos] == '\r'))
+            pos++;
+    };
+
+    auto expectChar = [](const std::string& s, size_t& pos, char c) -> bool {
+        if (pos < s.size() && s[pos] == c) { pos++; return true; }
+        return false;
+    };
+
+    auto findKey = [&](const std::string& s, size_t& pos, const std::string& key) -> bool {
+        size_t found = s.find("\"" + key + "\"", pos);
+        if (found == std::string::npos) return false;
+        pos = found + key.size() + 2;
+        skipWS(s, pos);
+        if (!expectChar(s, pos, ':')) return false;
+        skipWS(s, pos);
+        return true;
+    };
+
+    auto parseArray = [&](const std::string& s, size_t& pos) -> std::vector<int> {
+        std::vector<int> result;
+        if (!expectChar(s, pos, '[')) return result;
+        skipWS(s, pos);
+        while (pos < s.size() && s[pos] != ']') {
+            skipWS(s, pos);
+            int val = 0;
+            bool neg = false;
+            if (pos < s.size() && s[pos] == '-') { neg = true; pos++; }
+            while (pos < s.size() && s[pos] >= '0' && s[pos] <= '9') {
+                val = val * 10 + (s[pos] - '0');
+                pos++;
+            }
+            if (neg) val = -val;
+            result.push_back(val);
+            skipWS(s, pos);
+            if (pos < s.size() && s[pos] == ',') pos++;
+            skipWS(s, pos);
+        }
+        if (pos < s.size() && s[pos] == ']') pos++;
+        return result;
+    };
+
+    size_t pos = 0;
+    skipWS(content, pos);
+    if (!expectChar(content, pos, '{')) {
+        printf("[TopologyLabels] ERROR: Invalid JSON format\n");
+        return false;
+    }
+
+    if (!findKey(content, pos, "triangle_labels")) {
+        printf("[TopologyLabels] ERROR: 'triangle_labels' key not found\n");
+        return false;
+    }
+
+    topologyFaceLabels_ = parseArray(content, pos);
+
+    if (topologyFaceLabels_.empty()) {
+        printf("[TopologyLabels] ERROR: Empty triangle_labels array\n");
+        return false;
+    }
+
+    topologyLabelsLoaded = true;
+
+    std::unordered_map<int, int> catCounts;
+    for (int label : topologyFaceLabels_) {
+        catCounts[label]++;
+    }
+
+    const char* catNames[] = {
+        "FreeSurface", "HorizontalPlane", "LateralPlane_X",
+        "LateralPlane_Z", "NearHorizontal", "NearLateral_X",
+        "NearLateral_Z", "Degenerate", "ConvexFeature_Bolt",
+        "ConcaveFeature_Hole", "Flange", "Boss",
+        "Chamfer", "Fillet", "SphericalSurface"
+    };
+
+    printf("[TopologyLabels] Loaded %zu labels from %s\n",
+           topologyFaceLabels_.size(), jsonPath.c_str());
+    for (auto& [catId, count] : catCounts) {
+        const char* name = (catId >= 0 && catId < 15) ? catNames[catId] : "Unknown";
+        printf("  %2d %-25s: %d triangles\n", catId, name, count);
+    }
+    fflush(stdout);
+
+    return true;
+}
+
+bool RenderManager::loadSceneObjectTopologyLabels(SceneObject& obj, const std::string& jsonPath) {
+    std::ifstream file(jsonPath);
+    if (!file.is_open()) {
+        printf("[TopologyLabels] ERROR: Cannot open %s for object '%s'\n",
+               jsonPath.c_str(), obj.name.c_str());
+        fflush(stdout);
+        return false;
+    }
+
+    std::string content((std::istreambuf_iterator<char>(file)),
+                         std::istreambuf_iterator<char>());
+    file.close();
+
+    auto skipWS = [](const std::string& s, size_t& pos) {
+        while (pos < s.size() && (s[pos] == ' ' || s[pos] == '\t' || s[pos] == '\n' || s[pos] == '\r'))
+            pos++;
+    };
+
+    auto expectChar = [](const std::string& s, size_t& pos, char c) -> bool {
+        if (pos < s.size() && s[pos] == c) { pos++; return true; }
+        return false;
+    };
+
+    auto findKey = [&](const std::string& s, size_t& pos, const std::string& key) -> bool {
+        size_t found = s.find("\"" + key + "\"", pos);
+        if (found == std::string::npos) return false;
+        pos = found + key.size() + 2;
+        skipWS(s, pos);
+        if (!expectChar(s, pos, ':')) return false;
+        skipWS(s, pos);
+        return true;
+    };
+
+    auto parseArray = [&](const std::string& s, size_t& pos) -> std::vector<int> {
+        std::vector<int> result;
+        if (!expectChar(s, pos, '[')) return result;
+        skipWS(s, pos);
+        while (pos < s.size() && s[pos] != ']') {
+            skipWS(s, pos);
+            int val = 0;
+            bool neg = false;
+            if (pos < s.size() && s[pos] == '-') { neg = true; pos++; }
+            while (pos < s.size() && s[pos] >= '0' && s[pos] <= '9') {
+                val = val * 10 + (s[pos] - '0');
+                pos++;
+            }
+            if (neg) val = -val;
+            result.push_back(val);
+            skipWS(s, pos);
+            if (pos < s.size() && s[pos] == ',') pos++;
+            skipWS(s, pos);
+        }
+        if (pos < s.size() && s[pos] == ']') pos++;
+        return result;
+    };
+
+    size_t pos = 0;
+    skipWS(content, pos);
+    if (!expectChar(content, pos, '{')) return false;
+
+    if (!findKey(content, pos, "triangle_labels")) return false;
+
+    std::vector<int> labels = parseArray(content, pos);
+
+    if (labels.empty()) {
+        printf("[TopologyLabels] ERROR: Empty labels for object '%s'\n", obj.name.c_str());
+        return false;
+    }
+
+    if (labels.size() != obj.triangleCount) {
+        printf("[TopologyLabels] WARNING: Label count (%zu) != triangle count (%zu) for '%s'\n",
+               labels.size(), obj.triangleCount, obj.name.c_str());
+        size_t minCount = std::min(labels.size(), obj.triangleCount);
+        obj.faceCategoryIds.resize(obj.triangleCount, 0);
+        for (size_t i = 0; i < minCount; ++i) {
+            obj.faceCategoryIds[i] = labels[i];
+        }
+    } else {
+        obj.faceCategoryIds = labels;
+    }
+
+    std::unordered_map<int, int> catInstanceIndex;
+    obj.featureInstanceIds.resize(obj.triangleCount, 0);
+    for (size_t fi = 0; fi < obj.triangleCount; ++fi) {
+        int catId = obj.faceCategoryIds[fi];
+        if (catId == 0 || catId == 7) {
+            obj.featureInstanceIds[fi] = 0;
+        } else {
+            obj.featureInstanceIds[fi] = ++catInstanceIndex[catId];
+        }
+    }
+
+    obj.categoriesComputed = true;
+
+    printf("[TopologyLabels] Object '%s': %zu topology labels applied (GROUND TRUTH from STEP)\n",
+           obj.name.c_str(), labels.size());
+    fflush(stdout);
+    return true;
+}
+
+void RenderManager::uploadSceneObjectGPU(SceneObject& obj) {
+    if (obj.vertexData.empty()) return;
+
+    glGenVertexArrays(1, &obj.VAO);
+    glGenBuffers(1, &obj.VBO);
+
+    glBindVertexArray(obj.VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, obj.VBO);
+    glBufferData(GL_ARRAY_BUFFER, obj.vertexData.size() * sizeof(float),
+                 obj.vertexData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+void RenderManager::buildSceneObjectLabelData(SceneObject& obj) {
+    if (!obj.categoriesComputed || obj.triangleCount == 0) return;
+
+    obj.labelVertexData.clear();
+    obj.labelVertexData.reserve(obj.triangleCount * 18);
+
+    size_t fi = 0;
+    obj.trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        int catId = (fi < obj.faceCategoryIds.size()) ? obj.faceCategoryIds[fi] : 0;
+        float r, g, b;
+        categoryToColor(catId, &r, &g, &b);
+
+        float* verts[3] = {tri->vertex1, tri->vertex2, tri->vertex3};
+        for (int v = 0; v < 3; ++v) {
+            obj.labelVertexData.push_back(verts[v][0]);
+            obj.labelVertexData.push_back(verts[v][1]);
+            obj.labelVertexData.push_back(verts[v][2]);
+            obj.labelVertexData.push_back(r);
+            obj.labelVertexData.push_back(g);
+            obj.labelVertexData.push_back(b);
+        }
+        fi++;
+    });
+
+    if (obj.labelVAO == 0) glGenVertexArrays(1, &obj.labelVAO);
+    if (obj.labelVBO == 0) glGenBuffers(1, &obj.labelVBO);
+
+    glBindVertexArray(obj.labelVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, obj.labelVBO);
+    glBufferData(GL_ARRAY_BUFFER, obj.labelVertexData.size() * sizeof(float),
+                 obj.labelVertexData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+void RenderManager::buildSceneObjectInstanceLabelData(SceneObject& obj) {
+    if (!obj.categoriesComputed || obj.triangleCount == 0) return;
+
+    obj.labelVertexData.clear();
+    obj.labelVertexData.reserve(obj.triangleCount * 18);
+
+    size_t fi = 0;
+    obj.trianglePool->for_each([&](hhb::core::Triangle* tri) {
+        int catId = (fi < obj.faceCategoryIds.size()) ? obj.faceCategoryIds[fi] : 0;
+        int featIdx = (fi < obj.featureInstanceIds.size()) ? obj.featureInstanceIds[fi] : 0;
+
+        float r, g, b;
+        instanceColorEncode(obj.instanceId, catId, featIdx, &r, &g, &b);
+
+        float* verts[3] = {tri->vertex1, tri->vertex2, tri->vertex3};
+        for (int v = 0; v < 3; ++v) {
+            obj.labelVertexData.push_back(verts[v][0]);
+            obj.labelVertexData.push_back(verts[v][1]);
+            obj.labelVertexData.push_back(verts[v][2]);
+            obj.labelVertexData.push_back(r);
+            obj.labelVertexData.push_back(g);
+            obj.labelVertexData.push_back(b);
+        }
+        fi++;
+    });
+
+    if (obj.labelVAO == 0) glGenVertexArrays(1, &obj.labelVAO);
+    if (obj.labelVBO == 0) glGenBuffers(1, &obj.labelVBO);
+
+    glBindVertexArray(obj.labelVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, obj.labelVBO);
+    glBufferData(GL_ARRAY_BUFFER, obj.labelVertexData.size() * sizeof(float),
+                 obj.labelVertexData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+void RenderManager::randomizeSceneLayout() {
+    static std::mt19937 rng(42);
+    std::uniform_real_distribution<float> posDist(-3.0f, 3.0f);
+    std::uniform_real_distribution<float> rotDist(0.0f, 6.283185f);
+    std::uniform_real_distribution<float> scaleDist(0.5f, 2.0f);
+
+    struct PlacedBox {
+        float cx, cy, cz;
+        float halfW, halfH, halfD;
+    };
+    std::vector<PlacedBox> placed;
+
+    auto aabbOverlap = [](const PlacedBox& a, const PlacedBox& b) -> bool {
+        return (std::abs(a.cx - b.cx) < (a.halfW + b.halfW)) &&
+               (std::abs(a.cy - b.cy) < (a.halfH + b.halfH)) &&
+               (std::abs(a.cz - b.cz) < (a.halfD + b.halfD));
+    };
+
+    for (auto& obj : sceneObjects_) {
+        obj.rotation[0] = rotDist(rng);
+        obj.rotation[1] = rotDist(rng);
+        obj.rotation[2] = rotDist(rng);
+        obj.scale = scaleDist(rng);
+
+        float halfW = (obj.bounds[3] - obj.bounds[0]) * 0.5f * obj.scale;
+        float halfH = (obj.bounds[4] - obj.bounds[1]) * 0.5f * obj.scale;
+        float halfD = (obj.bounds[5] - obj.bounds[2]) * 0.5f * obj.scale;
+        float padding = 0.15f;
+        halfW += padding;
+        halfH += padding;
+        halfD += padding;
+
+        bool collisionFree = false;
+        int attempts = 0;
+        const int maxAttempts = 50;
+
+        while (!collisionFree && attempts < maxAttempts) {
+            obj.position[0] = posDist(rng);
+            obj.position[1] = 0.0f;
+            obj.position[2] = posDist(rng);
+
+            PlacedBox candidate{obj.position[0], obj.position[1], obj.position[2], halfW, halfH, halfD};
+
+            collisionFree = true;
+            for (const auto& p : placed) {
+                if (aabbOverlap(candidate, p)) {
+                    collisionFree = false;
+                    break;
+                }
+            }
+            attempts++;
+        }
+
+        if (!collisionFree) {
+            obj.position[0] = posDist(rng);
+            obj.position[1] = 0.0f;
+            obj.position[2] = posDist(rng);
+        }
+
+        placed.push_back({obj.position[0], obj.position[1], obj.position[2], halfW, halfH, halfD});
+    }
+}
+
+void RenderManager::applyDomainRandomization(const DomainRandomizationConfig& config,
+                                               float& lightAngle, float& lightIntensity,
+                                               float lightColor[3],
+                                               float& camJitterX, float& camJitterY,
+                                               float& camJitterZ, float& focalJitter) {
+    static std::mt19937 rng(std::random_device{}());
+
+    if (config.enableLightRandomization) {
+        std::uniform_real_distribution<float> angleDist(-config.lightAngleRange, config.lightAngleRange);
+        lightAngle = angleDist(rng);
+
+        std::uniform_real_distribution<float> intDist(config.lightIntensityRange[0],
+                                                       config.lightIntensityRange[1]);
+        lightIntensity = intDist(rng);
+
+        float cctMin = config.lightColorTempRange[0];
+        float cctMax = config.lightColorTempRange[1];
+        std::uniform_real_distribution<float> cctDist(cctMin, cctMax);
+        float cct = cctDist(rng);
+
+        float t = (cct - 1000.0f) / 9000.0f;
+        t = std::max(0.0f, std::min(1.0f, t));
+        if (t < 0.5f) {
+            lightColor[0] = 1.0f;
+            lightColor[1] = 0.6f + t * 0.8f;
+            lightColor[2] = 0.3f + t * 1.4f;
+        } else {
+            lightColor[0] = 1.0f - (t - 0.5f) * 0.3f;
+            lightColor[1] = 1.0f - (t - 0.5f) * 0.1f;
+            lightColor[2] = 1.0f;
+        }
+    }
+
+    if (config.enableCameraJitter) {
+        std::uniform_real_distribution<float> posJitter(-config.cameraJitterPosRange,
+                                                         config.cameraJitterPosRange);
+        camJitterX = posJitter(rng);
+        camJitterY = posJitter(rng);
+        camJitterZ = posJitter(rng);
+
+        std::uniform_real_distribution<float> focalDist(-config.focalLengthJitterRange,
+                                                         config.focalLengthJitterRange);
+        focalJitter = focalDist(rng);
+    }
+}
+
+void RenderManager::renderSceneRGB(const CaptureConfig& config,
+                                     const float* viewMatrix,
+                                     const float* projectionMatrix,
+                                     const float* lightPos,
+                                     const float* lightColor,
+                                     float lightIntensity) {
+    if (!shaderProgram) return;
+
+    glUseProgram(shaderProgram);
+
+    GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+    GLint projLoc = glGetUniformLocation(shaderProgram, "projection");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, viewMatrix);
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, projectionMatrix);
+
+    GLint lightPosLoc = glGetUniformLocation(shaderProgram, "lightPos");
+    GLint lightColorLoc = glGetUniformLocation(shaderProgram, "lightColor");
+    GLint lightIntLoc = glGetUniformLocation(shaderProgram, "lightIntensity");
+    if (lightPosLoc != -1) glUniform3fv(lightPosLoc, 1, lightPos);
+    if (lightColorLoc != -1) glUniform3fv(lightColorLoc, 1, lightColor);
+    if (lightIntLoc != -1) glUniform1f(lightIntLoc, lightIntensity);
+
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+
+    for (auto& obj : sceneObjects_) {
+        float model[16] = {
+            obj.scale, 0.0f, 0.0f, 0.0f,
+            0.0f, obj.scale, 0.0f, 0.0f,
+            0.0f, 0.0f, obj.scale, 0.0f,
+            obj.position[0], obj.position[1], obj.position[2], 1.0f
+        };
+
+        float cosRx = cosf(obj.rotation[0]), sinRx = sinf(obj.rotation[0]);
+        float cosRy = cosf(obj.rotation[1]), sinRy = sinf(obj.rotation[1]);
+        float cosRz = cosf(obj.rotation[2]), sinRz = sinf(obj.rotation[2]);
+
+        float rotX[16] = {1,0,0,0, 0,cosRx,sinRx,0, 0,-sinRx,cosRx,0, 0,0,0,1};
+        float rotY[16] = {cosRy,0,-sinRy,0, 0,1,0,0, sinRy,0,cosRy,0, 0,0,0,1};
+        float rotZ[16] = {cosRz,sinRz,0,0, -sinRz,cosRz,0,0, 0,0,1,0, 0,0,0,1};
+
+        float temp[16] = {0};
+        for (int row = 0; row < 4; ++row)
+            for (int col = 0; col < 4; ++col)
+                for (int k = 0; k < 4; ++k)
+                    temp[row * 4 + col] += rotZ[row * 4 + k] * rotY[k * 4 + col];
+
+        float rotZY[16] = {0};
+        for (int row = 0; row < 4; ++row)
+            for (int col = 0; col < 4; ++col)
+                for (int k = 0; k < 4; ++k)
+                    rotZY[row * 4 + col] += temp[row * 4 + k] * rotX[k * 4 + col];
+
+        float finalModel[16] = {0};
+        for (int row = 0; row < 4; ++row)
+            for (int col = 0; col < 4; ++col)
+                for (int k = 0; k < 4; ++k)
+                    finalModel[row * 4 + col] += model[row * 4 + k] * rotZY[k * 4 + col];
+
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, finalModel);
+
+        glBindVertexArray(obj.VAO);
+        glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(obj.triangleCount * 3));
+    }
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
+void RenderManager::renderSceneSemanticMask(const CaptureConfig& config,
+                                              const float* viewMatrix,
+                                              const float* projectionMatrix) {
+    if (!labelShaderProgram) return;
+
+    for (auto& obj : sceneObjects_) {
+        if (obj.labelVertexData.empty() || !obj.categoriesComputed) {
+            buildSceneObjectLabelData(obj);
+        }
+    }
+
+    glUseProgram(labelShaderProgram);
+
+    GLint viewLoc = glGetUniformLocation(labelShaderProgram, "view");
+    GLint projLoc = glGetUniformLocation(labelShaderProgram, "projection");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, viewMatrix);
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, projectionMatrix);
+
+    GLint modelLoc = glGetUniformLocation(labelShaderProgram, "model");
+
+    for (auto& obj : sceneObjects_) {
+        float model[16] = {
+            obj.scale, 0.0f, 0.0f, 0.0f,
+            0.0f, obj.scale, 0.0f, 0.0f,
+            0.0f, 0.0f, obj.scale, 0.0f,
+            obj.position[0], obj.position[1], obj.position[2], 1.0f
+        };
+
+        float cosRx = cosf(obj.rotation[0]), sinRx = sinf(obj.rotation[0]);
+        float cosRy = cosf(obj.rotation[1]), sinRy = sinf(obj.rotation[1]);
+        float cosRz = cosf(obj.rotation[2]), sinRz = sinf(obj.rotation[2]);
+
+        float rotX[16] = {1,0,0,0, 0,cosRx,sinRx,0, 0,-sinRx,cosRx,0, 0,0,0,1};
+        float rotY[16] = {cosRy,0,-sinRy,0, 0,1,0,0, sinRy,0,cosRy,0, 0,0,0,1};
+        float rotZ[16] = {cosRz,sinRz,0,0, -sinRz,cosRz,0,0, 0,0,1,0, 0,0,0,1};
+
+        float temp[16] = {0};
+        for (int row = 0; row < 4; ++row)
+            for (int col = 0; col < 4; ++col)
+                for (int k = 0; k < 4; ++k)
+                    temp[row * 4 + col] += rotZ[row * 4 + k] * rotY[k * 4 + col];
+
+        float rotZY[16] = {0};
+        for (int row = 0; row < 4; ++row)
+            for (int col = 0; col < 4; ++col)
+                for (int k = 0; k < 4; ++k)
+                    rotZY[row * 4 + col] += temp[row * 4 + k] * rotX[k * 4 + col];
+
+        float finalModel[16] = {0};
+        for (int row = 0; row < 4; ++row)
+            for (int col = 0; col < 4; ++col)
+                for (int k = 0; k < 4; ++k)
+                    finalModel[row * 4 + col] += model[row * 4 + k] * rotZY[k * 4 + col];
+
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, finalModel);
+
+        glBindVertexArray(obj.labelVAO);
+        glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(obj.triangleCount * 3));
+    }
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
+void RenderManager::renderSceneInstanceMask(const CaptureConfig& config,
+                                              const float* viewMatrix,
+                                              const float* projectionMatrix) {
+    if (!labelShaderProgram) return;
+
+    for (auto& obj : sceneObjects_) {
+        buildSceneObjectInstanceLabelData(obj);
+    }
+
+    glUseProgram(labelShaderProgram);
+
+    GLint viewLoc = glGetUniformLocation(labelShaderProgram, "view");
+    GLint projLoc = glGetUniformLocation(labelShaderProgram, "projection");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, viewMatrix);
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, projectionMatrix);
+
+    GLint modelLoc = glGetUniformLocation(labelShaderProgram, "model");
+
+    for (auto& obj : sceneObjects_) {
+        float model[16] = {
+            obj.scale, 0.0f, 0.0f, 0.0f,
+            0.0f, obj.scale, 0.0f, 0.0f,
+            0.0f, 0.0f, obj.scale, 0.0f,
+            obj.position[0], obj.position[1], obj.position[2], 1.0f
+        };
+
+        float cosRx = cosf(obj.rotation[0]), sinRx = sinf(obj.rotation[0]);
+        float cosRy = cosf(obj.rotation[1]), sinRy = sinf(obj.rotation[1]);
+        float cosRz = cosf(obj.rotation[2]), sinRz = sinf(obj.rotation[2]);
+
+        float rotX[16] = {1,0,0,0, 0,cosRx,sinRx,0, 0,-sinRx,cosRx,0, 0,0,0,1};
+        float rotY[16] = {cosRy,0,-sinRy,0, 0,1,0,0, sinRy,0,cosRy,0, 0,0,0,1};
+        float rotZ[16] = {cosRz,sinRz,0,0, -sinRz,cosRz,0,0, 0,0,1,0, 0,0,0,1};
+
+        float temp[16] = {0};
+        for (int row = 0; row < 4; ++row)
+            for (int col = 0; col < 4; ++col)
+                for (int k = 0; k < 4; ++k)
+                    temp[row * 4 + col] += rotZ[row * 4 + k] * rotY[k * 4 + col];
+
+        float rotZY[16] = {0};
+        for (int row = 0; row < 4; ++row)
+            for (int col = 0; col < 4; ++col)
+                for (int k = 0; k < 4; ++k)
+                    rotZY[row * 4 + col] += temp[row * 4 + k] * rotX[k * 4 + col];
+
+        float finalModel[16] = {0};
+        for (int row = 0; row < 4; ++row)
+            for (int col = 0; col < 4; ++col)
+                for (int k = 0; k < 4; ++k)
+                    finalModel[row * 4 + col] += model[row * 4 + k] * rotZY[k * 4 + col];
+
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, finalModel);
+
+        glBindVertexArray(obj.labelVAO);
+        glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(obj.triangleCount * 3));
+    }
+
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
+void RenderManager::initBackgroundRenderer() {
+    if (backgroundInitialized_) return;
+
+    const char* bgVertSrc = R"(
+#version 330
+layout (location = 0) in vec2 aPos;
+layout (location = 1) in vec2 aTexCoord;
+out vec2 TexCoord;
+void main() {
+    gl_Position = vec4(aPos, 0.9999, 1.0);
+    TexCoord = aTexCoord;
+}
+)";
+
+    const char* bgFragSrc = R"(
+#version 330
+out vec4 FragColor;
+in vec2 TexCoord;
+uniform sampler2D bgTexture;
+uniform bool useTexture;
+uniform vec3 bgColor;
+void main() {
+    if (useTexture) {
+        FragColor = texture(bgTexture, TexCoord);
+    } else {
+        FragColor = vec4(bgColor, 1.0);
+    }
+}
+)";
+
+    backgroundShaderProgram_ = createShaderProgram(bgVertSrc, bgFragSrc);
+
+    float bgVertices[] = {
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f,
+    };
+
+    glGenVertexArrays(1, &backgroundVAO_);
+    glGenBuffers(1, &backgroundVBO_);
+    glBindVertexArray(backgroundVAO_);
+    glBindBuffer(GL_ARRAY_BUFFER, backgroundVBO_);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(bgVertices), bgVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    backgroundColors_ = {
+        0.15f, 0.15f, 0.18f,
+        0.25f, 0.22f, 0.20f,
+        0.20f, 0.25f, 0.22f,
+        0.18f, 0.20f, 0.28f,
+        0.30f, 0.28f, 0.25f,
+        0.12f, 0.14f, 0.18f,
+        0.35f, 0.32f, 0.28f,
+        0.22f, 0.24f, 0.30f,
+    };
+
+    backgroundInitialized_ = true;
+    printf("[Background] Renderer initialized with %zu preset colors\n", backgroundColors_.size() / 3);
+    fflush(stdout);
+}
+
+void RenderManager::cleanupBackgroundRenderer() {
+    for (auto tex : backgroundTextures_) {
+        if (tex) glDeleteTextures(1, &tex);
+    }
+    backgroundTextures_.clear();
+    if (backgroundVAO_) { glDeleteVertexArrays(1, &backgroundVAO_); backgroundVAO_ = 0; }
+    if (backgroundVBO_) { glDeleteBuffers(1, &backgroundVBO_); backgroundVBO_ = 0; }
+    if (backgroundShaderProgram_) { glDeleteProgram(backgroundShaderProgram_); backgroundShaderProgram_ = 0; }
+    backgroundInitialized_ = false;
+}
+
+void RenderManager::loadBackgroundImages(const std::vector<std::string>& paths) {
+    for (auto tex : backgroundTextures_) {
+        if (tex) glDeleteTextures(1, &tex);
+    }
+    backgroundTextures_.clear();
+
+    for (const auto& path : paths) {
+        int w, h, channels;
+        unsigned char* data = stbi_load(path.c_str(), &w, &h, &channels, 3);
+        if (!data) {
+            printf("[Background] Failed to load: %s\n", path.c_str());
+            fflush(stdout);
+            continue;
+        }
+
+        GLuint texId;
+        glGenTextures(1, &texId);
+        glBindTexture(GL_TEXTURE_2D, texId);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        stbi_image_free(data);
+        backgroundTextures_.push_back(texId);
+
+        printf("[Background] Loaded: %s (%dx%d)\n", path.c_str(), w, h);
+        fflush(stdout);
+    }
+
+    printf("[Background] Total textures loaded: %zu\n", backgroundTextures_.size());
+    fflush(stdout);
+}
+
+void RenderManager::renderBackground(int backgroundIndex) {
+    if (!backgroundInitialized_) initBackgroundRenderer();
+
+    glDepthFunc(GL_ALWAYS);
+    glDisable(GL_DEPTH_TEST);
+
+    glUseProgram(backgroundShaderProgram_);
+
+    GLint useTexLoc = glGetUniformLocation(backgroundShaderProgram_, "useTexture");
+    GLint bgColorLoc = glGetUniformLocation(backgroundShaderProgram_, "bgTexture");
+
+    if (backgroundIndex >= 0 && backgroundIndex < (int)backgroundTextures_.size()) {
+        glUniform1i(useTexLoc, 1);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, backgroundTextures_[backgroundIndex]);
+        glUniform1i(bgColorLoc, 0);
+    } else {
+        glUniform1i(useTexLoc, 0);
+        int colorIdx = backgroundIndex - (int)backgroundTextures_.size();
+        if (colorIdx < 0) colorIdx = 0;
+        if (backgroundColors_.size() >= 3) {
+            colorIdx = colorIdx % ((int)backgroundColors_.size() / 3);
+            float r = backgroundColors_[colorIdx * 3 + 0];
+            float g = backgroundColors_[colorIdx * 3 + 1];
+            float b = backgroundColors_[colorIdx * 3 + 2];
+            GLint bgColLoc = glGetUniformLocation(backgroundShaderProgram_, "bgColor");
+            glUniform3f(bgColLoc, r, g, b);
+        }
+    }
+
+    glBindVertexArray(backgroundVAO_);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+
+    glUseProgram(0);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+}
+
+int RenderManager::selectRandomBackground() {
+    int totalOptions = (int)backgroundTextures_.size() + (int)(backgroundColors_.size() / 3);
+    if (totalOptions == 0) return -1;
+    static std::mt19937 bgRng(std::random_device{}());
+    std::uniform_int_distribution<int> dist(0, totalOptions - 1);
+    return dist(bgRng);
 }
 
 } // namespace render

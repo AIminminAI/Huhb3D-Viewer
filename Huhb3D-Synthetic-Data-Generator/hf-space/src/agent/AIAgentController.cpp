@@ -11,7 +11,7 @@ namespace agent {
 AIAgentController::AIAgentController(render::RenderManager& renderManager)
     : currentTriangleCount_(0), renderManager(renderManager) {
     // 设置默认的 API 端点
-    llmClient.setEndpoint("https://api.openai.com/v1/chat/completions");
+    llmClient_->setEndpoint("https://api.openai.com/v1/chat/completions");
     // 初始化文档检索器
     documentRetriever.initialize();
 }
@@ -20,11 +20,11 @@ AIAgentController::~AIAgentController() {
 }
 
 void AIAgentController::setApiKey(const std::string& api_key) {
-    llmClient.setApiKey(api_key);
+    llmClient_->setApiKey(api_key);
 }
 
 void AIAgentController::setEndpoint(const std::string& endpoint) {
-    llmClient.setEndpoint(endpoint);
+    llmClient_->setEndpoint(endpoint);
 }
 
 void AIAgentController::setModelMetadata(const std::string& modelName, size_t triangleCount, const std::string& filePath) {
@@ -148,7 +148,7 @@ bool AIAgentController::processUserCommand(const std::string& command, const std
         userMsg["content"] = userPrompt;
         messages.push_back(userMsg);
 
-        std::string response = llmClient.sendChat(messages);
+        std::string response = llmClient_->sendChat(messages);
 
         // 解析 LLM 响应
         return parseLLMResponse(response);

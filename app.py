@@ -23,6 +23,7 @@ from pathlib import Path
 
 import requests
 
+from license_guard import LicenseGuard
 
 SUPPORTED_EXTENSIONS = ["step", "stp", "iges", "igs", "stl", "obj"]
 SUPPORTED_UPLOAD_TYPES = [".step", ".stp", ".iges", ".igs", ".stl", ".obj"]
@@ -43,9 +44,16 @@ def show_demo_results():
     demo_legend = DEMO_DATA_DIR / "label_legend.txt"
     demo_poses = DEMO_DATA_DIR / "camera_poses.json"
     demo_manifest = DEMO_DATA_DIR / "manifest.json"
+    demo_scene_camera = DEMO_DATA_DIR / "scene_camera.json"
+    demo_scene_gt = DEMO_DATA_DIR / "scene_gt.json"
+    demo_gt_6dof = DEMO_DATA_DIR / "gt_6dof.json"
 
     st.markdown("---")
-    st.subheader("📊 Demo Results (Pre-generated)")
+    st.subheader("📊 Demo Results (Pre-generated Sample Data)")
+
+    st.warning("⚠️ **Demo Mode** — You are viewing pre-generated sample data. "
+               "To generate custom data from your own CAD models, the C++ rendering engine must be compiled. "
+               "See `build_and_compile.bat` or Docker deployment.")
 
     rgb_files = sorted(demo_rgb.glob("*.png")) if demo_rgb.exists() else []
     mask_files = sorted(demo_mask.glob("*.png")) if demo_mask.exists() else []
@@ -56,9 +64,9 @@ def show_demo_results():
     with col_s2:
         st.metric("Mask Images", len(mask_files))
     with col_s3:
-        st.metric("Time", "~0.5s/image")
+        st.metric("BOP Format", "✅" if demo_scene_camera.exists() else "❌")
     with col_s4:
-        st.metric("Camera Poses", "6DoF JSON")
+        st.metric("6DoF GT", "✅" if demo_gt_6dof.exists() else "❌")
 
     if demo_legend.exists():
         categories = {}
@@ -114,6 +122,21 @@ def show_demo_results():
         with st.expander("📐 Camera Poses (6DoF)", expanded=False):
             poses = json.loads(demo_poses.read_text(encoding='utf-8'))
             st.json(poses)
+
+    if demo_gt_6dof.exists():
+        with st.expander("🎯 6DoF Ground Truth (BOP + Quaternion)", expanded=False):
+            gt_data = json.loads(demo_gt_6dof.read_text(encoding='utf-8'))
+            st.json(gt_data)
+
+    if demo_scene_camera.exists():
+        with st.expander("📷 BOP scene_camera.json", expanded=False):
+            sc_data = json.loads(demo_scene_camera.read_text(encoding='utf-8'))
+            st.json(sc_data)
+
+    if demo_scene_gt.exists():
+        with st.expander("🎯 BOP scene_gt.json (Object Poses)", expanded=False):
+            sg_data = json.loads(demo_scene_gt.read_text(encoding='utf-8'))
+            st.json(sg_data)
 
     with st.expander("📦 Download Sample Data", expanded=False):
         zip_buffer = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
@@ -347,7 +370,7 @@ def parse_progress(line, total_count):
 
 def run_generation(stl_path, output_dir, sample_count, camera_radius,
                    image_width, image_height, save_mask, save_depth=False,
-                   progress_callback=None):
+                   progress_callback=None, extra_args=None):
     exe_path = find_cpp_executable()
     if not exe_path:
         return False, "C++ executable not found. Please compile the project first."
@@ -367,6 +390,9 @@ def run_generation(stl_path, output_dir, sample_count, camera_radius,
 
     if save_depth:
         cmd.append("--depth")
+
+    if extra_args:
+        cmd.extend(extra_args)
 
     try:
         process = subprocess.Popen(
@@ -412,13 +438,16 @@ def package_zip(output_dir):
 
     rgb_dir = output_path / "rgb"
     mask_dir = output_path / "mask"
+    mask_instance_dir = output_path / "mask_instance"
     depth_dir = output_path / "depth"
     legend_file = output_path / "label_legend.txt"
     desc_file = output_path / "description.json"
     poses_file = output_path / "camera_poses.json"
+    manifest_file = output_path / "manifest.json"
 
     rgb_count = len(list(rgb_dir.glob("*.png"))) if rgb_dir.exists() else 0
     mask_count = len(list(mask_dir.glob("*.png"))) if mask_dir.exists() else 0
+    instance_count = len(list(mask_instance_dir.glob("*.png"))) if mask_instance_dir.exists() else 0
     depth_count = len(list(depth_dir.glob("*.png"))) if depth_dir.exists() else 0
 
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -428,6 +457,9 @@ def package_zip(output_dir):
         if mask_dir.exists():
             for f in sorted(mask_dir.glob("*.png")):
                 zf.write(f, f"mask/{f.name}")
+        if mask_instance_dir.exists():
+            for f in sorted(mask_instance_dir.glob("*.png")):
+                zf.write(f, f"mask_instance/{f.name}")
         if depth_dir.exists():
             for f in sorted(depth_dir.glob("*.png")):
                 zf.write(f, f"depth/{f.name}")
@@ -439,15 +471,19 @@ def package_zip(output_dir):
             zf.write(desc_file, desc_file.name)
         if poses_file.exists():
             zf.write(poses_file, poses_file.name)
+        if manifest_file.exists():
+            zf.write(manifest_file, manifest_file.name)
         manifest = {
-            "version": "2.0",
+            "version": "3.0",
             "generator": "Huhb3D-SyntheticDataPipeline",
             "rgb_count": rgb_count,
             "mask_count": mask_count,
+            "instance_mask_count": instance_count,
             "depth_count": depth_count,
             "has_legend": legend_file.exists(),
             "has_ai_description": desc_file.exists(),
             "has_camera_poses": poses_file.exists(),
+            "has_manifest": manifest_file.exists(),
         }
         zf.writestr("manifest.json", json.dumps(manifest, indent=2))
 
@@ -493,6 +529,38 @@ def main():
 
     st.title("🤖 Huhb3D Synthetic Data Generator")
 
+    if "license_guard" not in st.session_state:
+        st.session_state.license_guard = LicenseGuard()
+
+    guard = st.session_state.license_guard
+    tier = guard.get_tier()
+    tier_display = guard.get_tier_display_name()
+
+    with st.sidebar:
+        st.markdown("### 🔑 License")
+        if tier == "free":
+            st.warning(f"**{tier_display} Edition** — Limited features")
+            license_key_input = st.text_input("Enter License Key", type="password", key="license_key")
+            if st.button("Activate License"):
+                if license_key_input:
+                    validated_tier = None
+                    from license_guard import _validate_license_key, _generate_machine_id
+                    mid = _generate_machine_id()
+                    validated_tier = _validate_license_key(license_key_input, mid)
+                    if validated_tier:
+                        st.session_state.license_guard.tier = validated_tier
+                        st.success(f"✅ Activated: {validated_tier.title()} Edition")
+                        st.rerun()
+                    else:
+                        st.error("❌ Invalid license key")
+        else:
+            st.success(f"**{tier_display} Edition**")
+            info = guard.license_info
+            if info.get("licensed_to"):
+                st.caption(f"Licensed to: {info['licensed_to']}")
+            if info.get("expires"):
+                st.caption(f"Expires: {info['expires']}")
+
     demo_mode = is_demo_mode()
     if demo_mode:
         st.info("🎭 **Demo Mode** — You're viewing pre-generated sample data. To generate custom data, deploy locally with the C++ engine.")
@@ -501,34 +569,42 @@ def main():
     col_left, col_right = st.columns([1, 2])
 
     with col_left:
-        st.subheader("📁 Upload CAD Model")
-        uploaded_file = st.file_uploader(
-            "Supports STEP, STP, IGES, IGS, STL, OBJ",
+        st.subheader("📁 Upload CAD Models")
+        uploaded_files = st.file_uploader(
+            "Supports STEP, STP, IGES, IGS, STL, OBJ (multiple files)",
             type=SUPPORTED_EXTENSIONS,
-            help="Upload your CAD model file. STEP/IGES files will be auto-converted to STL.",
+            accept_multiple_files=True,
+            help="Upload one or more CAD model files. Multiple files enable multi-object scene synthesis.",
         )
 
-        if uploaded_file is not None:
-            file_ext = Path(uploaded_file.name).suffix.lower()
-            file_size_mb = uploaded_file.size / (1024 * 1024)
-            st.success(f"✅ {uploaded_file.name} ({file_size_mb:.1f} MB)")
-
-            if file_ext in (".step", ".stp", ".iges", ".igs"):
-                st.info("🔄 STEP/IGES will be auto-converted to STL")
+        if uploaded_files:
+            for uf in uploaded_files:
+                file_ext = Path(uf.name).suffix.lower()
+                file_size_mb = uf.size / (1024 * 1024)
+                st.success(f"✅ {uf.name} ({file_size_mb:.1f} MB)")
+            if len(uploaded_files) > 1:
+                st.info(f"🎯 **Multi-object mode**: {len(uploaded_files)} models will be placed in a shared scene")
         else:
-            st.info("👆 Please upload a CAD model file")
+            st.info("👆 Please upload one or more CAD model files")
 
         st.markdown("---")
         st.subheader("⚙️ Generation Settings")
 
+        max_images = guard.get_max_images()
+        effective_max = max_images if max_images > 0 else 50000
+        slider_max = min(1000, effective_max) if max_images > 0 else 50000
+        slider_min = min(10, slider_max - 1)
+        slider_default = min(500, slider_max) if slider_max > 500 else slider_max
         sample_count = st.slider(
             "📊 Sample Count",
-            min_value=100,
-            max_value=1000,
-            value=500,
-            step=50,
+            min_value=slider_min,
+            max_value=slider_max,
+            value=slider_default,
+            step=50 if slider_max >= 100 else max(1, slider_max // 10),
             help="Number of 360° views to render",
         )
+        if max_images > 0 and max_images < 50000:
+            st.caption(f"💡 {tier_display} edition: max {max_images} images per session")
 
         camera_radius = st.slider(
             "🔭 Camera Radius",
@@ -553,6 +629,145 @@ def main():
 
         save_camera_poses = st.checkbox("📐 Export Camera Poses (6DoF)", value=True,
                                         help="Export camera position, rotation, view/projection matrices as JSON")
+
+        model_unit = st.selectbox(
+            "📏 Model Unit",
+            ["mm", "m", "cm", "inch"],
+            index=0,
+            help="Unit of measurement in your CAD model. STEP files are typically in mm. Affects depth map values.",
+        )
+
+        st.markdown("---")
+        with st.expander("🎯 Instance Segmentation & Multi-Object", expanded=True):
+            instance_segmentation = st.checkbox(
+                "🏷️ Instance-Level Segmentation",
+                value=True,
+                help="Encode InstanceID + FeatureTypeID + FeatureIndex in mask pixels. Each hole/bolt gets a unique ID.",
+            )
+            if instance_segmentation:
+                st.caption("Mask pixel (R,G,B) = (InstanceID, FeatureTypeID, FeatureIndex)")
+
+            multi_allowed = guard.is_feature_allowed("multi_object")
+            multi_object_scene = st.checkbox(
+                "📦 Multi-Object Scene Synthesis",
+                value=len(uploaded_files) > 1 if uploaded_files else False,
+                help="Place multiple objects in a shared scene with random positions/rotations",
+                disabled=not multi_allowed,
+            )
+            if not multi_allowed:
+                st.caption("🔒 Multi-Object requires Professional edition")
+            if multi_object_scene:
+                object_count_display = st.slider(
+                    "Max objects per scene",
+                    min_value=2, max_value=10, value=min(5, len(uploaded_files)) if uploaded_files else 5,
+                    help="Number of objects to randomly place in each scene"
+                )
+                enable_collision = st.checkbox(
+                    "🚧 Collision Avoidance",
+                    value=True,
+                    help="Prevent objects from overlapping in the scene",
+                )
+
+        st.markdown("---")
+        with st.expander("🎲 Domain Randomization", expanded=False):
+            enable_light_random = st.checkbox(
+                "💡 Light Randomization",
+                value=True,
+                help="Randomize light angle, intensity, and color temperature per frame",
+            )
+            if enable_light_random:
+                light_intensity_range = st.slider(
+                    "Light Intensity Range",
+                    min_value=0.1, max_value=3.0, value=(0.5, 2.0), step=0.1,
+                    help="Min and max light intensity",
+                )
+                light_temp_range = st.slider(
+                    "Color Temperature Range (K)",
+                    min_value=2000, max_value=12000, value=(3000, 9000), step=500,
+                    help="Color temperature range in Kelvin",
+                )
+
+            enable_camera_jitter = st.checkbox(
+                "📷 Camera Jitter",
+                value=True,
+                help="Add slight random offset to camera position and focal length",
+            )
+            if enable_camera_jitter:
+                camera_jitter_amount = st.slider(
+                    "Jitter Amount",
+                    min_value=0.0, max_value=0.2, value=0.05, step=0.01,
+                    help="Camera position jitter range",
+                )
+                focal_jitter_amount = st.slider(
+                    "Focal Jitter (°)",
+                    min_value=0.0, max_value=5.0, value=2.0, step=0.5,
+                    help="Focal length jitter in degrees",
+                )
+
+            enable_background_random = st.checkbox(
+                "🖼️ Background Randomization",
+                value=False,
+                help="Randomize background with images or preset colors for domain randomization",
+            )
+            if enable_background_random:
+                bg_images = st.file_uploader(
+                    "Upload Background Images",
+                    type=["png", "jpg", "jpeg", "bmp"],
+                    accept_multiple_files=True,
+                    help="Upload images to use as random backgrounds",
+                )
+                bg_dir = None
+                if bg_images:
+                    bg_dir = TEMP_DIR / "backgrounds"
+                    bg_dir.mkdir(parents=True, exist_ok=True)
+                    for bg_img in bg_images:
+                        bg_path = bg_dir / bg_img.name
+                        with open(bg_path, "wb") as f:
+                            f.write(bg_img.getbuffer())
+
+        st.markdown("---")
+        with st.expander("🔬 STEP Topology Ground Truth", expanded=False):
+            topo_allowed = guard.is_feature_allowed("step_topology")
+            enable_step_topology = st.checkbox(
+                "🔬 Use STEP Topology Labels",
+                value=False,
+                help="Parse STEP file topology to get EXACT face type labels (hole/bolt/plane) instead of curvature-based guessing",
+                disabled=not topo_allowed,
+            )
+            if not topo_allowed:
+                st.warning("🔒 STEP Topology requires Standard edition or above")
+            if enable_step_topology:
+                st.info("🎯 **Ground Truth Mode**: Labels come directly from CAD topology, not curvature estimation")
+                st.caption("Requires: `pip install cadquery` (includes OpenCASCADE)")
+
+                step_topology_files = st.file_uploader(
+                    "Upload STEP/STP files for topology parsing",
+                    type=["step", "stp"],
+                    accept_multiple_files=True,
+                    help="Upload STEP files corresponding to your models. The parser will extract exact face types.",
+                )
+
+                linear_deflection = st.slider(
+                    "Tessellation Precision",
+                    min_value=0.01, max_value=1.0, value=0.1, step=0.01,
+                    help="Smaller = more triangles but more precise topology mapping",
+                )
+
+        st.markdown("---")
+        with st.expander("🎨 Sim-to-Real Enhancement", expanded=False):
+            enable_sim2real = st.checkbox(
+                "🎨 Apply Sim-to-Real Augmentation",
+                value=False,
+                help="Post-process rendered images with realistic noise, blur, and color jitter",
+            )
+            if enable_sim2real:
+                st.caption("Bridges the simulation-to-reality gap for robot vision training")
+
+                aug_gaussian_noise = st.checkbox("📡 Gaussian Noise (sensor noise)", value=True)
+                aug_motion_blur = st.checkbox("🏃 Motion Blur (camera movement)", value=True)
+                aug_occlusion = st.checkbox("🚫 Random Occlusion", value=False)
+                aug_color_jitter = st.checkbox("🌈 Color Jitter (brightness/contrast)", value=True)
+                aug_depth_noise = st.checkbox("📏 Depth Sensor Noise", value=True)
 
         st.markdown("---")
         st.subheader("🧠 AI Description")
@@ -589,38 +804,41 @@ def main():
         if demo_mode:
             show_demo_results()
         else:
+            has_files = uploaded_files and len(uploaded_files) > 0
             start_button = st.button(
                 "🚀 Start Generation",
-                disabled=(uploaded_file is None or exe_path is None),
+                disabled=(not has_files or exe_path is None),
                 use_container_width=True,
                 type="primary",
             )
 
-            if start_button and uploaded_file is not None:
+            if start_button and has_files:
                 TEMP_DIR.mkdir(exist_ok=True)
                 OUTPUT_DIR.mkdir(exist_ok=True)
 
                 session_id = str(int(time.time()))
                 session_output = OUTPUT_DIR / f"run_{session_id}"
 
-                file_ext = Path(uploaded_file.name).suffix.lower()
-                temp_input = TEMP_DIR / f"upload_{session_id}{file_ext}"
-                temp_stl = TEMP_DIR / f"upload_{session_id}.stl"
+                stl_paths = []
+                for idx, uploaded_file in enumerate(uploaded_files):
+                    file_ext = Path(uploaded_file.name).suffix.lower()
+                    temp_input = TEMP_DIR / f"upload_{session_id}_{idx}{file_ext}"
+                    temp_stl = TEMP_DIR / f"upload_{session_id}_{idx}.stl"
 
-                with open(temp_input, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
+                    with open(temp_input, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
 
-                st.info(f"📁 File saved: {uploaded_file.name}")
+                    if file_ext not in (".stl",):
+                        with st.spinner(f"Converting {uploaded_file.name} to STL..."):
+                            conv_ok = convert_to_stl(temp_input, temp_stl)
+                        if not conv_ok:
+                            st.stop()
+                        stl_paths.append((temp_stl, uploaded_file.name))
+                        st.success(f"✅ {uploaded_file.name} converted to STL")
+                    else:
+                        stl_paths.append((temp_input, uploaded_file.name))
 
-                if file_ext not in (".stl",):
-                    with st.spinner("Converting to STL..."):
-                        conv_ok = convert_to_stl(temp_input, temp_stl)
-                    if not conv_ok:
-                        st.stop()
-                    stl_path = temp_stl
-                    st.success("✅ Conversion to STL complete")
-                else:
-                    stl_path = temp_input
+                st.info(f"📁 {len(stl_paths)} file(s) ready for generation")
 
                 progress_bar = st.progress(0.0, text="Initializing...")
                 status_text = st.empty()
@@ -631,8 +849,72 @@ def main():
 
                 start_time = time.time()
 
+                primary_stl = stl_paths[0][0]
+
+                extra_args = []
+                extra_args.extend(["--model-unit", model_unit])
+                if instance_segmentation:
+                    extra_args.append("--instance-segmentation")
+                if multi_object_scene and len(stl_paths) > 1:
+                    extra_args.extend(["--multi-object"])
+                    for stl_path, stl_name in stl_paths[1:]:
+                        extra_args.extend(["--scene-object", str(stl_path)])
+                if enable_light_random:
+                    extra_args.append("--light-randomization")
+                if enable_camera_jitter:
+                    extra_args.append("--camera-jitter")
+                if enable_background_random:
+                    extra_args.append("--background-randomization")
+                    if bg_dir and bg_dir.exists():
+                        extra_args.extend(["--background-dir", str(bg_dir)])
+
+                topology_labels_paths = []
+                if enable_step_topology and step_topology_files:
+                    from step_topology_parser import parse_step_topology
+                    topology_output = TEMP_DIR / f"topology_{session_id}"
+                    topology_output.mkdir(parents=True, exist_ok=True)
+
+                    for tidx, step_file in enumerate(step_topology_files):
+                        step_temp = TEMP_DIR / f"step_{session_id}_{tidx}{Path(step_file.name).suffix}"
+                        with open(step_temp, "wb") as f:
+                            f.write(step_file.getbuffer())
+
+                        topo_out = topology_output / f"obj_{tidx}"
+                        with st.spinner(f"Parsing STEP topology: {step_file.name}..."):
+                            topo_ok = parse_step_topology(
+                                str(step_temp), str(topo_out),
+                                linear_deflection=linear_deflection,
+                            )
+                        if topo_ok:
+                            labels_json = topo_out / "topology_labels.json"
+                            tessellated_stl = topo_out / "tessellated.stl"
+                            if labels_json.exists():
+                                topology_labels_paths.append(str(labels_json))
+                                st.success(f"✅ {step_file.name}: topology parsed (GROUND TRUTH)")
+                                summary_json = topo_out / "topology_summary.json"
+                                if summary_json.exists():
+                                    with open(summary_json) as sf:
+                                        summary = json.load(sf)
+                                    cats = summary.get("categories", {})
+                                    if cats:
+                                        cat_str = ", ".join(
+                                            f"{v['name']}({v['face_count']})"
+                                            for v in cats.values()
+                                        )
+                                        st.caption(f"Faces: {cat_str}")
+                            if tessellated_stl.exists() and tidx == 0:
+                                primary_stl = str(tessellated_stl)
+                                st.info(f"📐 Using STEP-tessellated mesh for primary object")
+                        else:
+                            st.warning(f"⚠️ {step_file.name}: topology parsing failed, using curvature fallback")
+
+                    if topology_labels_paths:
+                        extra_args.extend(["--topology-labels", topology_labels_paths[0]])
+                        for tlp in topology_labels_paths[1:]:
+                            extra_args.extend(["--scene-object-topology", tlp])
+
                 success, log_msg = run_generation(
-                    stl_path=stl_path,
+                    stl_path=primary_stl,
                     output_dir=session_output,
                     sample_count=sample_count,
                     camera_radius=camera_radius,
@@ -641,6 +923,7 @@ def main():
                     save_mask=save_mask,
                     save_depth=save_depth,
                     progress_callback=on_progress,
+                    extra_args=extra_args,
                 )
 
                 elapsed = time.time() - start_time
@@ -653,14 +936,17 @@ def main():
                     st.markdown("---")
                     st.subheader("📊 Generation Results")
 
-                    col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+                    col_s1, col_s2, col_s3, col_s4, col_s5 = st.columns(5)
                     with col_s1:
                         st.metric("RGB Images", stats["rgb_count"])
                     with col_s2:
-                        st.metric("Mask Images", stats["mask_count"])
+                        st.metric("Semantic Masks", stats["mask_count"])
                     with col_s3:
-                        st.metric("Time", f"{elapsed:.1f}s")
+                        instance_count = len(list((session_output / "mask_instance").glob("*.png"))) if (session_output / "mask_instance").exists() else 0
+                        st.metric("Instance Masks", instance_count)
                     with col_s4:
+                        st.metric("Time", f"{elapsed:.1f}s")
+                    with col_s5:
                         depth_count = len(list((session_output / "depth").glob("*.png"))) if (session_output / "depth").exists() else 0
                         st.metric("Depth Maps", depth_count)
 
@@ -675,6 +961,31 @@ def main():
                                     "Color (RGB)": f"({r}, {g}, {b})",
                                 })
                             st.table(cat_data)
+
+                    with st.spinner("Generating quality report..."):
+                        try:
+                            from dataset_report import generate_report
+                            report_path = str(session_output / "dataset_report.json")
+                            report = generate_report(str(session_output), report_path, "json")
+                            if report:
+                                tr = report.get("training_readiness", {})
+                                score = tr.get("score", 0)
+                                grade = tr.get("grade", "?")
+                                ready = tr.get("ready_for_training", False)
+                                col_r1, col_r2, col_r3 = st.columns(3)
+                                with col_r1:
+                                    st.metric("Quality Score", f"{score}/100")
+                                with col_r2:
+                                    st.metric("Grade", grade)
+                                with col_r3:
+                                    st.metric("Training Ready", "✅ YES" if ready else "❌ NO")
+
+                                html_report_path = str(session_output / "dataset_report.html")
+                                generate_report(str(session_output), html_report_path, "html")
+                        except ImportError:
+                            st.info("📊 Install dataset_report.py for quality scoring")
+                        except Exception as e:
+                            st.warning(f"⚠️ Report generation failed: {e}")
 
                     ai_description = None
                     if enable_ai_desc and deepseek_api_key:
@@ -741,6 +1052,24 @@ def main():
                         else:
                             st.warning("⚠️ No RGB images found for AI description.")
 
+                    if enable_sim2real:
+                        with st.spinner("Applying Sim-to-Real augmentation..."):
+                            from sim_to_real import process_directory
+                            aug_output = session_output.parent / f"{session_output.name}_augmented"
+                            aug_config = {
+                                "gaussian_noise": aug_gaussian_noise,
+                                "motion_blur": aug_motion_blur,
+                                "occlusion": aug_occlusion,
+                                "color_jitter": aug_color_jitter,
+                                "depth_noise": aug_depth_noise,
+                            }
+                            aug_ok = process_directory(str(session_output), str(aug_output), aug_config)
+                            if aug_ok:
+                                st.success("✅ Sim-to-Real augmentation applied!")
+                                session_output = aug_output
+                            else:
+                                st.warning("⚠️ Sim-to-Real augmentation failed, using original data")
+
                     with st.spinner("Packaging ZIP..."):
                         zip_path = package_zip(session_output)
 
@@ -782,7 +1111,7 @@ def main():
                             if preview_mask.exists():
                                 mask_files = sorted(preview_mask.glob("*.png"))
                                 if mask_files:
-                                    with st.expander("🏷️ Mask Preview", expanded=True):
+                                    with st.expander("🏷️ Semantic Mask Preview", expanded=True):
                                         mask_cols = st.columns(min(4, len(mask_files[:4])))
                                         for idx, col in enumerate(mask_cols):
                                             if idx < len(mask_files):
@@ -792,36 +1121,71 @@ def main():
                                                     use_container_width=True,
                                                 )
 
+                            preview_instance = session_output / "mask_instance"
+                            if preview_instance.exists():
+                                instance_files = sorted(preview_instance.glob("*.png"))
+                                if instance_files:
+                                    with st.expander("🎯 Instance Mask Preview", expanded=False):
+                                        inst_cols = st.columns(min(4, len(instance_files[:4])))
+                                        for idx, col in enumerate(inst_cols):
+                                            if idx < len(instance_files):
+                                                col.image(
+                                                    str(instance_files[idx]),
+                                                    caption=instance_files[idx].name,
+                                                    use_container_width=True,
+                                                )
+                                        st.caption("Pixel (R,G,B) = (InstanceID, FeatureTypeID, FeatureIndex)")
+
+                        manifest_path = session_output / "manifest.json"
+                        if manifest_path.exists():
+                            with st.expander("📋 Instance Manifest", expanded=False):
+                                manifest_data = json.loads(manifest_path.read_text(encoding='utf-8'))
+                                st.json(manifest_data)
+
                     st.session_state["last_output_dir"] = str(session_output)
                 else:
                     progress_bar.progress(0.0, text="❌ Generation Failed")
                     st.error(f"Generation failed!\n\n{log_msg}")
 
-            elif uploaded_file is None and start_button:
-                st.warning("Please upload a CAD model file first.")
+            elif not has_files and start_button:
+                st.warning("Please upload one or more CAD model files first.")
 
     st.markdown("---")
     with st.expander("ℹ️ About", expanded=False):
         st.markdown("""
-        **Huhb3D Synthetic Data Generator** - Pipeline for generating synthetic training data from CAD models.
+        **Huhb3D Synthetic Data Generator** - Synthetic data generation engine for robot vision training.
 
         **Workflow:**
-        1. Upload a CAD model (STEP/IGES/STL/OBJ)
-        2. Configure generation parameters
+        1. Upload one or more CAD models (STEP/IGES/STL/OBJ)
+        2. Configure generation parameters (instance segmentation, multi-object, domain randomization)
         3. Click "Start Generation" to run 360° sampling
-        4. Download the ZIP package with RGB images + semantic masks
+        4. Download the ZIP package with RGB images + masks + annotations
 
         **Output Structure:**
         ```
         dataset.zip
         ├── rgb/frame_0001.png ~ frame_NNNN.png
-        ├── mask/mask_0001.png ~ mask_NNNN.png
-        ├── depth/depth_0001.png ~ depth_NNNN.png (if enabled)
+        ├── mask/mask_0001.png ~ mask_NNNN.png (semantic segmentation)
+        ├── mask_instance/instance_0001.png ~ instance_NNNN.png (instance segmentation)
+        ├── depth/depth_0001.png ~ depth_NNNN.png (if enabled, 16-bit)
         ├── label_legend.txt
         ├── camera_poses.json (6DoF camera poses)
+        ├── manifest.json (instance hierarchy: Scene -> Object -> Feature)
+        ├── scene_camera.json (BOP format camera intrinsics/extrinsics)
+        ├── scene_gt.json (BOP format object 6DoF poses)
+        ├── gt_6dof.json (6DoF Ground Truth per frame with quaternion)
         ├── description.json (if AI description enabled)
-        └── manifest.json
+        ├── topology_labels.json (if STEP topology enabled, per-triangle GROUND TRUTH)
+        ├── topology_summary.json (face type statistics from STEP)
+        └── coco_annotations.json / coco_instance_annotations.json
         ```
+
+        **Instance Segmentation Encoding:**
+        - Mask pixel (R, G, B) = (InstanceID, FeatureTypeID, FeatureIndex)
+        - InstanceID: unique per object in scene (1-255)
+        - FeatureTypeID: semantic category (0-11)
+        - FeatureIndex: instance index within that feature type
+        - Example: Pixel (2, 9, 3) = Object 2, Hole type, 4th hole instance
 
         **Semantic Categories:**
         | ID | Category | Description |
@@ -838,6 +1202,11 @@ def main():
         | 9 | ConcaveFeature_Hole | Concave depression (hole) |
         | 10 | Flange | Flange feature |
         | 11 | Boss | Boss/stud feature |
+
+        **Domain Randomization:**
+        - 💡 Light randomization: angle, intensity, color temperature (CCT)
+        - 📷 Camera jitter: position offset, focal length variation
+        - 🎲 Scene randomization: object positions, rotations, scale per frame
         """)
 
 

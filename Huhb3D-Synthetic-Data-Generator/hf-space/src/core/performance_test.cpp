@@ -2,9 +2,10 @@
 #include <vector>
 #include <chrono>
 #include "object_pool.h"
+#include <cstring>
 
 // 测试结构体
-truct TestStruct {
+struct TestStruct {
     int id;
     double value;
     char name[32];

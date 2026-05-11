@@ -12,7 +12,9 @@ RUN apt-get update && apt-get install -y \
     libglu1-mesa-dev \
     libosmesa6-dev \
     libbenchmark-dev \
+    libgl-dev \
     python3-pip \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -28,10 +30,11 @@ COPY Cube.stl .
 COPY Sphere.stl .
 
 # 3. 编译 C++ 渲染器
-RUN mkdir build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc)
+# 关键调试行：如果这里出来的列表没有 .h，说明文件根本没传上来
+RUN ls -R /app/src/core/
 
+# 然后再执行构建
+RUN mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)
 # 4. 安装 Python 依赖
 RUN pip3 install --no-cache-dir -r requirements.txt
 

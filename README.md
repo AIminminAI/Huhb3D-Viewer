@@ -10,6 +10,8 @@
 
 **[🌐 在线 Demo](https://huggingface.co/spaces/Hgodwarrior/Huhb3D-Synthetic-Data-Generator)** | **[📄 效果展示页](demo_showcase.html)** | **[🚀 快速开始](#-快速开始)** | **[💰 商业授权](#-许可证与定价)**
 
+![Huhb3D 合成数据生成演示](docs/images/demo_synthetic_data.gif)
+
 ---
 
 ## ⚠️ 重要说明
@@ -394,6 +396,32 @@ run_<timestamp>/
 - Enterprise 版含私有部署 + 优先支持 + SLA
 
 商业闭源授权请联系开发者。
+
+---
+
+## ☕ 支持与赞助
+
+如果这个项目对你有帮助，欢迎赞助支持持续开发：
+
+- **爱发电**：[https://afdian.com](https://afdian.com)（搜索 Huhb3D）
+- **微信赞赏**：扫描下方二维码 ☕
+
+> 开源不易，你的支持是我持续迭代的动力！
+
+---
+
+## 📧 定制数据集服务
+
+需要**定制化合成数据集**？我可以提供：
+
+- 按需生成特定零件的标注数据（RGB + Mask + Depth + 6DoF + BOP）
+- 支持 STEP/STL 文件输入，输出标准 BOP/COCO/YOLO 格式
+- 可定制光照、背景、遮挡、Sim-to-Real 增强参数
+
+**联系方式**：
+- 📧 邮箱：在 GitHub 个人主页查看
+- 💬 微信：在 GitHub 个人主页查看
+- 🐛 Issue：直接在 [GitHub Issues](https://github.com/AIminminAI/Huhb3D-Viewer/issues) 提需求
 
 ---
 

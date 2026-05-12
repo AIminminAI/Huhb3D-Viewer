@@ -4,7 +4,6 @@ WORKDIR /app
 
 COPY index.html .
 COPY server.py .
-COPY demo_data/ ./demo_data/
 
 RUN useradd -m -u 1000 user
 RUN chown -R user:user /app

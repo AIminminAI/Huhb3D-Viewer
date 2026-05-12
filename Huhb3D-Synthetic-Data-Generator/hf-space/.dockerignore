@@ -1,5 +1,11 @@
 .git
 .github
+src/
+CMakeLists.txt
+entrypoint.sh
+Cube.stl
+Sphere.stl
+mask_to_coco.py
 build
 build_v2
 __pycache__

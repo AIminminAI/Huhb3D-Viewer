@@ -1,7 +1,7 @@
 """
 batch_pipeline.py - Batch STEP File Processing Pipeline
 ========================================================
-Commercial-grade batch processing for synthetic data generation.
+End-to-end batch processing for synthetic data generation.
 Processes multiple STEP files through the complete pipeline:
   1. STEP Topology Parsing (ground truth labels)
   2. C++ Rendering (RGB + masks + depth)

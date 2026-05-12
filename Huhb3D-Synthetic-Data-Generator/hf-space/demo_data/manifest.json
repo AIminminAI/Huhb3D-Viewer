@@ -1,0 +1,15 @@
+{
+  "version": "2.0",
+  "generator": "Huhb3D-SyntheticDataPipeline",
+  "rgb_count": 6,
+  "mask_count": 6,
+  "depth_count": 0,
+  "instance_mask_count": 0,
+  "has_legend": true,
+  "has_camera_poses": true,
+  "has_bop_format": true,
+  "has_6dof_gt": true,
+  "has_topology_labels": false,
+  "has_ai_description": false,
+  "note": "Demo data contains 6 sample frames. Full generation requires C++ engine compilation."
+}

@@ -364,15 +364,15 @@ a:hover { text-decoration: underline; }
 
 <div class="stats-row" style="padding: 30px 20px; background: white;">
     <div class="stat-item">
-        <div class="stat-value">0.5s</div>
-        <div class="stat-label">每帧渲染速度</div>
+        <div class="stat-value">~0.5s</div>
+        <div class="stat-label">每帧渲染速度 (参考值)</div>
     </div>
     <div class="stat-item">
         <div class="stat-value">6</div>
         <div class="stat-label">输出格式</div>
     </div>
     <div class="stat-item">
-        <div class="stat-value">12+</div>
+        <div class="stat-value">15</div>
         <div class="stat-label">语义类别</div>
     </div>
     <div class="stat-item">
@@ -425,13 +425,13 @@ a:hover { text-decoration: underline; }
             </div>
             <div class="feature-card">
                 <div class="feature-icon">📊</div>
-                <h3>质量报告 <span class="badge badge-pro">商用</span></h3>
+                <h3>📊 数据质量报告</h3>
                 <p>自动生成数据集质量报告（JSON+HTML），含训练就绪度评分、BOP合规检查、标注质量分析，可交付客户</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🔄</div>
-                <h3>批量 Pipeline</h3>
-                <p>一键处理整个 STEP 文件目录，自动完成 拓扑→渲染→增强→标注→报告 全流程，支持商用规模数据生成</p>
+                <h3>批量 Pipeline <span class="badge badge-pro">Professional+</span></h3>
+                <p>一键处理整个 STEP 文件目录，自动完成 拓扑→渲染→增强→标注→报告 全流程，支持大规模数据生成</p>
             </div>
         </div>
     </div>
@@ -686,7 +686,7 @@ a:hover { text-decoration: underline; }
             </div>
             <div class="use-case">
                 <h4>🎓 学术研究</h4>
-                <p>免费版支持 100 张/会话，适合论文实验和算法验证。</p>
+                <p>免费版支持 200 张/会话 + STEP拓扑 + BOP格式，适合论文实验和算法验证。</p>
             </div>
         </div>
     </div>
@@ -702,13 +702,15 @@ a:hover { text-decoration: underline; }
                 <div class="pricing-price">¥0</div>
                 <div class="pricing-period">永久免费</div>
                 <ul class="pricing-features">
-                    <li class="yes">✅ 100 张/会话</li>
-                    <li class="yes">✅ RGB + 语义 Mask</li>
-                    <li class="no">❌ STEP 拓扑解析</li>
+                    <li class="yes">✅ 200 张/会话</li>
+                    <li class="yes">✅ RGB + 语义/实例 Mask</li>
+                    <li class="yes">✅ STEP 拓扑解析</li>
+                    <li class="yes">✅ BOP 格式输出</li>
+                    <li class="yes">✅ 深度图</li>
+                    <li class="yes">✅ 质量报告</li>
                     <li class="no">❌ Sim-to-Real</li>
                     <li class="no">❌ 批量 Pipeline</li>
-                    <li class="no">❌ BOP 格式</li>
-                    <li class="no">❌ 深度图</li>
+                    <li class="no">❌ YOLO 导出</li>
                 </ul>
             </div>
             <div class="pricing-card">
@@ -717,12 +719,12 @@ a:hover { text-decoration: underline; }
                 <div class="pricing-period">/年</div>
                 <ul class="pricing-features">
                     <li class="yes">✅ 5,000 张/会话</li>
-                    <li class="yes">✅ RGB + 语义/实例 Mask</li>
-                    <li class="yes">✅ STEP 拓扑解析</li>
+                    <li class="yes">✅ 全部 Free 功能</li>
                     <li class="yes">✅ Sim-to-Real 增强</li>
-                    <li class="yes">✅ BOP 格式输出</li>
-                    <li class="yes">✅ 深度图</li>
+                    <li class="yes">✅ YOLO 导出</li>
                     <li class="no">❌ 批量 Pipeline</li>
+                    <li class="no">❌ 多物体场景</li>
+                    <li class="no">❌ API 访问</li>
                 </ul>
             </div>
             <div class="pricing-card featured">
@@ -735,7 +737,6 @@ a:hover { text-decoration: underline; }
                     <li class="yes">✅ 批量 Pipeline</li>
                     <li class="yes">✅ 多物体场景</li>
                     <li class="yes">✅ API 访问</li>
-                    <li class="yes">✅ 质量报告</li>
                     <li class="yes">✅ YOLO-seg 导出</li>
                 </ul>
             </div>
@@ -795,14 +796,14 @@ a:hover { text-decoration: underline; }
                 </tr>
                 <tr>
                     <td><strong>部署难度</strong></td>
-                    <td>🟢 低 (pip install)</td>
+                    <td>🟢 Demo:低(pip) / 完整:中(需编译C++)</td>
                     <td>🟡 中 (需 Blender)</td>
                     <td>🔴 高 (GPU集群)</td>
                     <td>🟡 中 (需 Unity)</td>
                 </tr>
                 <tr>
                     <td><strong>硬件要求</strong></td>
-                    <td>🟢 CPU即可渲染</td>
+                    <td>🟢 集成显卡即可</td>
                     <td>🟡 需GPU(Blender)</td>
                     <td>🔴 高端GPU</td>
                     <td>🟡 需GPU</td>

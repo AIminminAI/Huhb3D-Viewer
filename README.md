@@ -403,7 +403,7 @@ run_<timestamp>/
 
 如果这个项目对你有帮助，欢迎赞助支持持续开发：
 
-- **爱发电**：[https://afdian.com](https://afdian.com)（搜索 Huhb3D）
+- **爱发电**：[https://afdian.com/a/aiminhu](https://afdian.com/a/aiminhu)
 - **微信赞赏**：扫描下方二维码 ☕
 
 > 开源不易，你的支持是我持续迭代的动力！

@@ -52,77 +52,133 @@ def image_to_base64(path_str: str):
         return None
 
 
-def build_metrics_html(manifest, rgb_count, mask_count, depth_count, has_6dof):
+@st.cache_data(show_spinner=False)
+def build_full_viewer_html(rgb_files, mask_files, depth_files, manifest, has_6dof):
     m = manifest or {}
-    rgb_val = m.get("rgb_count", rgb_count)
-    mask_val = m.get("mask_count", mask_count)
-    depth_val = m.get("depth_count", depth_count)
+    rgb_val = m.get("rgb_count", len(rgb_files))
+    mask_val = m.get("mask_count", len(mask_files))
+    depth_val = m.get("depth_count", len(depth_files))
     dof_val = "✅" if has_6dof else "❌"
 
+    num_images = min(len(rgb_files), len(mask_files))
+    if num_images == 0:
+        return """
+        <div style="background:#0e1117;padding:40px;text-align:center;color:#888;">
+            暂无 Demo 数据。请在本地运行完整版。
+        </div>
+        """
+
+    rgb_b64_list = []
+    for f in rgb_files[:num_images]:
+        b = image_to_base64(str(f))
+        rgb_b64_list.append(b if b else "")
+
+    mask_b64_list = []
+    for f in mask_files[:num_images]:
+        b = image_to_base64(str(f))
+        mask_b64_list.append(b if b else "")
+
+    depth_b64_list = []
+    for f in depth_files[:num_images]:
+        b = image_to_base64(str(f))
+        depth_b64_list.append(b if b else "")
+
+    has_depth = len(depth_files) > 0
+
+    js_rgb_array = "[" + ",".join(f'"{b}"' for b in rgb_b64_list) + "]"
+    js_mask_array = "[" + ",".join(f'"{b}"' for b in mask_b64_list) + "]"
+    js_depth_array = "[" + ",".join(f'"{b}"' for b in depth_b64_list) + "]"
+
     return f"""
-    <div style="background:#0e1117; padding:4px 0;">
-        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
-            <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
-                <div style="font-size:2em; font-weight:700; color:#4fc3f7;">{rgb_val}</div>
-                <div style="color:#aaa; font-size:0.9em;">RGB 图像</div>
+    <div style="background:#0e1117;padding:16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+            <div style="background:#1a1a2e;border-radius:8px;padding:16px;text-align:center;">
+                <div style="font-size:2em;font-weight:700;color:#4fc3f7;">{rgb_val}</div>
+                <div style="color:#aaa;font-size:0.9em;">RGB 图像</div>
             </div>
-            <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
-                <div style="font-size:2em; font-weight:700; color:#81c784;">{mask_val}</div>
-                <div style="color:#aaa; font-size:0.9em;">语义 Mask</div>
+            <div style="background:#1a1a2e;border-radius:8px;padding:16px;text-align:center;">
+                <div style="font-size:2em;font-weight:700;color:#81c784;">{mask_val}</div>
+                <div style="color:#aaa;font-size:0.9em;">语义 Mask</div>
             </div>
-            <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
-                <div style="font-size:2em; font-weight:700; color:#ffb74d;">{depth_val}</div>
-                <div style="color:#aaa; font-size:0.9em;">深度图</div>
+            <div style="background:#1a1a2e;border-radius:8px;padding:16px;text-align:center;">
+                <div style="font-size:2em;font-weight:700;color:#ffb74d;">{depth_val}</div>
+                <div style="color:#aaa;font-size:0.9em;">深度图</div>
             </div>
-            <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
-                <div style="font-size:2em; font-weight:700; color:#e57373;">{dof_val}</div>
-                <div style="color:#aaa; font-size:0.9em;">6DoF 位姿</div>
+            <div style="background:#1a1a2e;border-radius:8px;padding:16px;text-align:center;">
+                <div style="font-size:2em;font-weight:700;color:#e57373;">{dof_val}</div>
+                <div style="color:#aaa;font-size:0.9em;">6DoF 位姿</div>
             </div>
         </div>
-    </div>
-    """
 
+        <div style="margin-bottom:16px;">
+            <label style="color:#ccc;font-weight:600;font-size:14px;">
+                选择视角: <span id="huhb_idx_label">1</span> / {num_images}
+            </label>
+            <input type="range" id="huhb_slider" min="0" max="{num_images - 1}" value="0"
+                style="width:100%;margin-top:8px;accent-color:#4fc3f7;">
+        </div>
 
-def build_rendering_html(rgb_b64, mask_b64, has_depth, depth_b64=None):
-    if rgb_b64:
-        rgb_img_html = f'<img src="data:image/png;base64,{rgb_b64}" style="max-width:100%;border-radius:6px;display:block;">'
-    else:
-        rgb_img_html = '<div style="color:#888;padding:40px 0;background:#1a1a2e;border-radius:6px;font-size:13px;">RGB 图像加载失败</div>'
-
-    if mask_b64:
-        mask_img_html = f'<img src="data:image/png;base64,{mask_b64}" style="max-width:100%;border-radius:6px;display:block;">'
-    else:
-        mask_img_html = '<div style="color:#888;padding:40px 0;background:#1a1a2e;border-radius:6px;font-size:13px;">Mask 图像加载失败</div>'
-
-    if has_depth and depth_b64:
-        depth_html = f"""
-        <div style="text-align:center;">
-            <div style="color:#ccc;font-weight:600;margin-bottom:8px;font-size:14px;">📏 深度图</div>
-            <img src="data:image/png;base64,{depth_b64}" style="max-width:100%;border-radius:6px;display:block;">
-        </div>"""
-    else:
-        depth_html = """
-        <div style="text-align:center;">
-            <div style="color:#ccc;font-weight:600;margin-bottom:8px;font-size:14px;">📏 深度图</div>
-            <div style="color:#888;padding:40px 0;background:#1a1a2e;border-radius:6px;font-size:13px;">
-                深度图需在本地编译 C++ 引擎后生成
-            </div>
-        </div>"""
-
-    return f"""
-    <div style="background:#0e1117; padding:8px 0;">
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
             <div style="text-align:center;">
                 <div style="color:#ccc;font-weight:600;margin-bottom:8px;font-size:14px;">📷 RGB 渲染图</div>
-                {rgb_img_html}
+                <div id="huhb_rgb_container" style="min-height:200px;display:flex;align-items:center;justify-content:center;background:#1a1a2e;border-radius:6px;overflow:hidden;">
+                </div>
             </div>
             <div style="text-align:center;">
                 <div style="color:#ccc;font-weight:600;margin-bottom:8px;font-size:14px;">🏷️ 语义分割 Mask</div>
-                {mask_img_html}
+                <div id="huhb_mask_container" style="min-height:200px;display:flex;align-items:center;justify-content:center;background:#1a1a2e;border-radius:6px;overflow:hidden;">
+                </div>
             </div>
-            {depth_html}
+            <div style="text-align:center;">
+                <div style="color:#ccc;font-weight:600;margin-bottom:8px;font-size:14px;">📏 深度图</div>
+                <div id="huhb_depth_container" style="min-height:200px;display:flex;align-items:center;justify-content:center;background:#1a1a2e;border-radius:6px;overflow:hidden;">
+                </div>
+            </div>
         </div>
     </div>
+
+    <script>
+        (function() {{
+            var rgbData = {js_rgb_array};
+            var maskData = {js_mask_array};
+            var depthData = {js_depth_array};
+            var hasDepth = {"true" if has_depth else "false"};
+
+            var slider = document.getElementById('huhb_slider');
+            var label = document.getElementById('huhb_idx_label');
+            var rgbC = document.getElementById('huhb_rgb_container');
+            var maskC = document.getElementById('huhb_mask_container');
+            var depthC = document.getElementById('huhb_depth_container');
+
+            function update(idx) {{
+                label.textContent = idx + 1;
+
+                if (rgbData[idx]) {{
+                    rgbC.innerHTML = '<img src="data:image/png;base64,' + rgbData[idx] + '" style="max-width:100%;border-radius:6px;display:block;">';
+                }} else {{
+                    rgbC.innerHTML = '<div style="color:#888;font-size:13px;">RGB 图像加载失败</div>';
+                }}
+
+                if (maskData[idx]) {{
+                    maskC.innerHTML = '<img src="data:image/png;base64,' + maskData[idx] + '" style="max-width:100%;border-radius:6px;display:block;">';
+                }} else {{
+                    maskC.innerHTML = '<div style="color:#888;font-size:13px;">Mask 图像加载失败</div>';
+                }}
+
+                if (hasDepth && depthData[idx]) {{
+                    depthC.innerHTML = '<img src="data:image/png;base64,' + depthData[idx] + '" style="max-width:100%;border-radius:6px;display:block;">';
+                }} else {{
+                    depthC.innerHTML = '<div style="color:#888;padding:40px 0;font-size:13px;">深度图需在本地编译 C++ 引擎后生成</div>';
+                }}
+            }}
+
+            slider.addEventListener('input', function() {{
+                update(parseInt(this.value));
+            }});
+
+            update(0);
+        }})();
+    </script>
     """
 
 
@@ -151,30 +207,12 @@ def main():
     label_legend = load_text(DEMO_DIR / "label_legend.txt")
     camera_poses = load_json(DEMO_DIR / "camera_poses.json")
 
-    if manifest:
-        st.markdown("---")
-        st.subheader("📊 Demo 数据概览")
-        metrics_html = build_metrics_html(
-            manifest, len(rgb_files), len(mask_files), len(depth_files), gt_6dof is not None
-        )
-        components.html(metrics_html, height=100)
-
     st.markdown("---")
-    st.subheader("🖼️ 渲染效果展示")
 
-    num_images = min(len(rgb_files), len(mask_files))
-    if num_images == 0:
-        st.info("暂无 Demo 数据。请在本地运行完整版。")
-        return
-
-    selected_idx = st.slider("选择视角", 0, num_images - 1, 0, key="view_slider")
-
-    rgb_b64 = image_to_base64(str(rgb_files[selected_idx])) if selected_idx < len(rgb_files) else None
-    mask_b64 = image_to_base64(str(mask_files[selected_idx])) if selected_idx < len(mask_files) else None
-    depth_b64 = image_to_base64(str(depth_files[selected_idx])) if selected_idx < len(depth_files) else None
-
-    rendering_html = build_rendering_html(rgb_b64, mask_b64, len(depth_files) > 0, depth_b64)
-    components.html(rendering_html, height=500)
+    viewer_html = build_full_viewer_html(
+        rgb_files, mask_files, depth_files, manifest, gt_6dof is not None
+    )
+    components.html(viewer_html, height=560)
 
     if label_legend:
         with st.expander("🏷️ 语义标签分类", expanded=False):

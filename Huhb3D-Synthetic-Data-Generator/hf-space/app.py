@@ -7,9 +7,10 @@ Full data generation requires local deployment with C++ engine compiled.
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 import json
+import base64
 from pathlib import Path
-from PIL import Image
 
 DEMO_DIR = Path(__file__).parent / "demo_data"
 
@@ -43,11 +44,15 @@ def load_demo_images():
 
 
 @st.cache_data(show_spinner=False)
-def load_pil_image(path_str: str):
-    return Image.open(path_str)
+def image_to_base64(path_str: str):
+    try:
+        with open(path_str, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+    except (FileNotFoundError, IOError):
+        return None
 
 
-def render_metrics_html(manifest, rgb_count, mask_count, depth_count, has_6dof):
+def build_metrics_html(manifest, rgb_count, mask_count, depth_count, has_6dof):
     m = manifest or {}
     rgb_val = m.get("rgb_count", rgb_count)
     mask_val = m.get("mask_count", mask_count)
@@ -55,39 +60,70 @@ def render_metrics_html(manifest, rgb_count, mask_count, depth_count, has_6dof):
     dof_val = "✅" if has_6dof else "❌"
 
     return f"""
-    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin:8px 0;">
-        <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
-            <div style="font-size:2em; font-weight:700; color:#4fc3f7;">{rgb_val}</div>
-            <div style="color:#aaa; font-size:0.9em;">RGB 图像</div>
-        </div>
-        <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
-            <div style="font-size:2em; font-weight:700; color:#81c784;">{mask_val}</div>
-            <div style="color:#aaa; font-size:0.9em;">语义 Mask</div>
-        </div>
-        <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
-            <div style="font-size:2em; font-weight:700; color:#ffb74d;">{depth_val}</div>
-            <div style="color:#aaa; font-size:0.9em;">深度图</div>
-        </div>
-        <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
-            <div style="font-size:2em; font-weight:700; color:#e57373;">{dof_val}</div>
-            <div style="color:#aaa; font-size:0.9em;">6DoF 位姿</div>
+    <div style="background:#0e1117; padding:4px 0;">
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px;">
+            <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
+                <div style="font-size:2em; font-weight:700; color:#4fc3f7;">{rgb_val}</div>
+                <div style="color:#aaa; font-size:0.9em;">RGB 图像</div>
+            </div>
+            <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
+                <div style="font-size:2em; font-weight:700; color:#81c784;">{mask_val}</div>
+                <div style="color:#aaa; font-size:0.9em;">语义 Mask</div>
+            </div>
+            <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
+                <div style="font-size:2em; font-weight:700; color:#ffb74d;">{depth_val}</div>
+                <div style="color:#aaa; font-size:0.9em;">深度图</div>
+            </div>
+            <div style="background:#1a1a2e; border-radius:8px; padding:16px; text-align:center;">
+                <div style="font-size:2em; font-weight:700; color:#e57373;">{dof_val}</div>
+                <div style="color:#aaa; font-size:0.9em;">6DoF 位姿</div>
+            </div>
         </div>
     </div>
     """
 
 
-FIX_LAYOUT_CSS = """
-<style>
-    /* Fix column flicker: set min-height so columns don't collapse during rerun */
-    div[data-testid="stVerticalBlock"] > div[style*="flex"] > div[data-testid="stVerticalBlock"] {
-        min-height: 60px;
-    }
-    /* Prevent image container from collapsing */
-    .stImage {
-        min-height: 200px;
-    }
-</style>
-"""
+def build_rendering_html(rgb_b64, mask_b64, has_depth, depth_b64=None):
+    if rgb_b64:
+        rgb_img_html = f'<img src="data:image/png;base64,{rgb_b64}" style="max-width:100%;border-radius:6px;display:block;">'
+    else:
+        rgb_img_html = '<div style="color:#888;padding:40px 0;background:#1a1a2e;border-radius:6px;font-size:13px;">RGB 图像加载失败</div>'
+
+    if mask_b64:
+        mask_img_html = f'<img src="data:image/png;base64,{mask_b64}" style="max-width:100%;border-radius:6px;display:block;">'
+    else:
+        mask_img_html = '<div style="color:#888;padding:40px 0;background:#1a1a2e;border-radius:6px;font-size:13px;">Mask 图像加载失败</div>'
+
+    if has_depth and depth_b64:
+        depth_html = f"""
+        <div style="text-align:center;">
+            <div style="color:#ccc;font-weight:600;margin-bottom:8px;font-size:14px;">📏 深度图</div>
+            <img src="data:image/png;base64,{depth_b64}" style="max-width:100%;border-radius:6px;display:block;">
+        </div>"""
+    else:
+        depth_html = """
+        <div style="text-align:center;">
+            <div style="color:#ccc;font-weight:600;margin-bottom:8px;font-size:14px;">📏 深度图</div>
+            <div style="color:#888;padding:40px 0;background:#1a1a2e;border-radius:6px;font-size:13px;">
+                深度图需在本地编译 C++ 引擎后生成
+            </div>
+        </div>"""
+
+    return f"""
+    <div style="background:#0e1117; padding:8px 0;">
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+            <div style="text-align:center;">
+                <div style="color:#ccc;font-weight:600;margin-bottom:8px;font-size:14px;">📷 RGB 渲染图</div>
+                {rgb_img_html}
+            </div>
+            <div style="text-align:center;">
+                <div style="color:#ccc;font-weight:600;margin-bottom:8px;font-size:14px;">🏷️ 语义分割 Mask</div>
+                {mask_img_html}
+            </div>
+            {depth_html}
+        </div>
+    </div>
+    """
 
 
 def main():
@@ -96,8 +132,6 @@ def main():
         page_icon="🤖",
         layout="wide",
     )
-
-    st.markdown(FIX_LAYOUT_CSS, unsafe_allow_html=True)
 
     st.title("🤖 Huhb3D Synthetic Data Generator")
     st.markdown("**面向机器人视觉训练的合成数据生成器** — Demo 展示")
@@ -120,9 +154,10 @@ def main():
     if manifest:
         st.markdown("---")
         st.subheader("📊 Demo 数据概览")
-        st.markdown(render_metrics_html(
+        metrics_html = build_metrics_html(
             manifest, len(rgb_files), len(mask_files), len(depth_files), gt_6dof is not None
-        ), unsafe_allow_html=True)
+        )
+        components.html(metrics_html, height=100)
 
     st.markdown("---")
     st.subheader("🖼️ 渲染效果展示")
@@ -134,28 +169,12 @@ def main():
 
     selected_idx = st.slider("选择视角", 0, num_images - 1, 0, key="view_slider")
 
-    rgb_img = load_pil_image(str(rgb_files[selected_idx])) if selected_idx < len(rgb_files) else None
-    mask_img = load_pil_image(str(mask_files[selected_idx])) if selected_idx < len(mask_files) else None
-    depth_img = load_pil_image(str(depth_files[selected_idx])) if selected_idx < len(depth_files) else None
+    rgb_b64 = image_to_base64(str(rgb_files[selected_idx])) if selected_idx < len(rgb_files) else None
+    mask_b64 = image_to_base64(str(mask_files[selected_idx])) if selected_idx < len(mask_files) else None
+    depth_b64 = image_to_base64(str(depth_files[selected_idx])) if selected_idx < len(depth_files) else None
 
-    col_rgb, col_mask, col_depth = st.columns(3)
-
-    with col_rgb:
-        st.markdown("**📷 RGB 渲染图**")
-        if rgb_img:
-            st.image(rgb_img, use_container_width=True)
-
-    with col_mask:
-        st.markdown("**🏷️ 语义分割 Mask**")
-        if mask_img:
-            st.image(mask_img, use_container_width=True)
-
-    with col_depth:
-        st.markdown("**📏 深度图**")
-        if depth_img:
-            st.image(depth_img, use_container_width=True)
-        else:
-            st.info("深度图需在本地编译 C++ 引擎后生成")
+    rendering_html = build_rendering_html(rgb_b64, mask_b64, len(depth_files) > 0, depth_b64)
+    components.html(rendering_html, height=500)
 
     if label_legend:
         with st.expander("🏷️ 语义标签分类", expanded=False):

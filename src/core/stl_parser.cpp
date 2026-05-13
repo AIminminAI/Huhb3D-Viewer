@@ -173,45 +173,28 @@ ParserResult StlParser::parse_binary(const std::string& filename, ObjectPool<Tri
 
     std::cout << "Binary STL: Found " << triangle_count << " triangles" << std::endl;
 
-    // Process triangles in parallel
-    const size_t batch_size = 10000;
-    const size_t num_batches = (triangle_count + batch_size - 1) / batch_size;
-    std::vector<std::future<size_t>> futures;
-
-    for (size_t batch = 0; batch < num_batches; ++batch) {
-        size_t start = batch * batch_size;
-        size_t end = std::min(start + batch_size, static_cast<size_t>(triangle_count));
-
-        futures.push_back(std::async(std::launch::async, [&, start, end]() {
-            size_t local_count = 0;
-            for (size_t i = start; i < end; ++i) {
-                Triangle tri;
-                size_t triangle_offset = offset + i * 50;
-                
-                // Read normal
-                memcpy(tri.normal, data + triangle_offset, 12);
-                
-                // Read vertices
-                memcpy(tri.vertex1, data + triangle_offset + 12, 12);
-                memcpy(tri.vertex2, data + triangle_offset + 24, 12);
-                memcpy(tri.vertex3, data + triangle_offset + 36, 12);
-                
-                // Read attribute count
-                memcpy(&tri.attribute_count, data + triangle_offset + 48, 2);
-                
-                // Add to pool
-                Triangle* tri_ptr = pool.allocate();
-                new (tri_ptr) Triangle(tri);
-                local_count++;
-            }
-            return local_count;
-        }));
-    }
-
-    // Collect results
     size_t total_triangles = 0;
-    for (auto& future : futures) {
-        total_triangles += future.get();
+    for (size_t i = 0; i < triangle_count; ++i) {
+        Triangle tri;
+        size_t triangle_offset = offset + i * 50;
+        
+        memcpy(tri.normal, data + triangle_offset, 12);
+        memcpy(tri.vertex1, data + triangle_offset + 12, 12);
+        memcpy(tri.vertex2, data + triangle_offset + 24, 12);
+        memcpy(tri.vertex3, data + triangle_offset + 36, 12);
+        memcpy(&tri.attribute_count, data + triangle_offset + 48, 2);
+        
+        Triangle* tri_ptr = pool.allocate();
+        if (!tri_ptr) {
+            std::cerr << "Pool allocation failed at triangle " << i << std::endl;
+            result.error = "Pool allocation failed";
+            UnmapViewOfFile(lpMapAddress);
+            CloseHandle(hMapFile);
+            CloseHandle(hFile);
+            return result;
+        }
+        new (tri_ptr) Triangle(tri);
+        total_triangles++;
     }
 
     // Unmap view and close handles
@@ -253,48 +236,22 @@ ParserResult StlParser::parse_binary(const std::string& filename, ObjectPool<Tri
 
     std::cout << "Binary STL: Found " << triangle_count << " triangles" << std::endl;
 
-    // Process triangles in parallel
-    const size_t batch_size = 10000;
-    const size_t num_batches = (triangle_count + batch_size - 1) / batch_size;
-    std::vector<std::future<size_t>> futures;
-
-    for (size_t batch = 0; batch < num_batches; ++batch) {
-        size_t start = batch * batch_size;
-        size_t end = std::min(start + batch_size, static_cast<size_t>(triangle_count));
-
-        futures.push_back(std::async(std::launch::async, [&, start, end]() {
-            size_t local_count = 0;
-            for (size_t i = start; i < end; ++i) {
-                Triangle tri;
-                size_t triangle_offset = offset + i * 50;
-                
-                // Read normal
-                memcpy(tri.normal, data + triangle_offset, 12);
-                
-                // Read vertices
-                memcpy(tri.vertex1, data + triangle_offset + 12, 12);
-                memcpy(tri.vertex2, data + triangle_offset + 24, 12);
-                memcpy(tri.vertex3, data + triangle_offset + 36, 12);
-                
-                // Read attribute count
-                memcpy(&tri.attribute_count, data + triangle_offset + 48, 2);
-                
-                // Add to pool
-                Triangle* tri_ptr = pool.allocate();
-                new (tri_ptr) Triangle(tri);
-                local_count++;
-            }
-            return local_count;
-        }));
-    }
-
-    // Collect results
     size_t total_triangles = 0;
-    for (auto& future : futures) {
-        total_triangles += future.get();
+    for (size_t i = 0; i < triangle_count; ++i) {
+        Triangle tri;
+        size_t triangle_offset = offset + i * 50;
+        
+        memcpy(tri.normal, data + triangle_offset, 12);
+        memcpy(tri.vertex1, data + triangle_offset + 12, 12);
+        memcpy(tri.vertex2, data + triangle_offset + 24, 12);
+        memcpy(tri.vertex3, data + triangle_offset + 36, 12);
+        memcpy(&tri.attribute_count, data + triangle_offset + 48, 2);
+        
+        Triangle* tri_ptr = pool.allocate();
+        new (tri_ptr) Triangle(tri);
+        total_triangles++;
     }
 
-    // Unmap and close
     munmap(data, size);
     close(fd);
 #endif

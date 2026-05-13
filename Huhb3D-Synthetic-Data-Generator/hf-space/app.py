@@ -16,6 +16,7 @@ DEMO_DIR = Path(__file__).parent / "demo_data"
 
 GITHUB_URL = "https://github.com/AIminminAI/Huhb3D-Viewer"
 GITEE_URL = "https://gitee.com/aiminminai/Huhb3D-Viewer"
+AFDIAN_URL = "https://afdian.com/a/aiminhu"
 
 
 @st.cache_data(show_spinner=False)
@@ -297,7 +298,7 @@ docker run -p 7860:7860 huhb3d-synthetic
 """)
 
     st.markdown("---")
-    st.caption("Huhb3D Synthetic Data Generator v2.0 | AGPL-3.0 License")
+    st.caption(f"Huhb3D Synthetic Data Generator v2.0 | AGPL-3.0 License | [☕ 爱发电]({AFDIAN_URL})")
 
 
 if __name__ == "__main__":

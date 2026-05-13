@@ -80,19 +80,14 @@ public:
 
     // Allocate object
     T* allocate() {
-        // Try to get from free list
         FreeNode* node = free_list_.load(std::memory_order_acquire);
         while (node) {
-            // Load next node with acquire memory order
             FreeNode* next = node->next.load(std::memory_order_acquire);
-            // Compare-exchange weak: lock-free CAS operation
             if (free_list_.compare_exchange_weak(node, next, std::memory_order_acq_rel, std::memory_order_acquire)) {
-                // Reinterpret cast: convert FreeNode* to T*
                 return reinterpret_cast<T*>(node);
             }
         }
 
-        // Free list is empty, try to allocate in existing blocks
         BlockHeader* block = head_block_.load(std::memory_order_acquire);
         while (block) {
             size_t used = block->used.load(std::memory_order_acquire);
@@ -101,13 +96,13 @@ public:
                         used, used + 1,
                         std::memory_order_acq_rel,
                         std::memory_order_acquire)) {
-                    return reinterpret_cast<T*>(block->data + sizeof(T) * used);
+                    return reinterpret_cast<T*>(
+                        reinterpret_cast<char*>(block) + sizeof(BlockHeader) + sizeof(T) * used);
                 }
             }
             block = block->next.load(std::memory_order_acquire);
         }
 
-        // All blocks are full, allocate new block and retry on head
         allocate_block();
         BlockHeader* head = head_block_.load(std::memory_order_acquire);
         while (true) {
@@ -121,7 +116,8 @@ public:
                     used, used + 1,
                     std::memory_order_acq_rel,
                     std::memory_order_acquire)) {
-                return reinterpret_cast<T*>(head->data + sizeof(T) * used);
+                return reinterpret_cast<T*>(
+                    reinterpret_cast<char*>(head) + sizeof(BlockHeader) + sizeof(T) * used);
             }
         }
     }
@@ -157,7 +153,8 @@ public:
         while (block) {
             size_t used = block->used.load(std::memory_order_acquire);
             for (size_t i = 0; i < used; ++i) {
-                T* obj = reinterpret_cast<T*>(block->data + sizeof(T) * i);
+                T* obj = reinterpret_cast<T*>(
+                    reinterpret_cast<char*>(block) + sizeof(BlockHeader) + sizeof(T) * i);
                 func(obj);
             }
             block = block->next.load(std::memory_order_acquire);
@@ -182,7 +179,8 @@ public:
             size_t used = b->used.load(std::memory_order_acquire);
             if (index < current_index + used) {
                 size_t offset = index - current_index;
-                return *reinterpret_cast<T*>(b->data + sizeof(T) * offset);
+                return *reinterpret_cast<T*>(
+                    reinterpret_cast<char*>(b) + sizeof(BlockHeader) + sizeof(T) * offset);
             }
             current_index += used;
         }
@@ -199,32 +197,19 @@ private:
     // Allocate new memory block
     void allocate_block() {
         try {
-            // Calculate block size
             size_t actual_block_size = block_size_;
-            std::cout << "Allocating block with size: " << actual_block_size << " bytes" << std::endl;
-            
-            // Allocate memory
             void* memory = nullptr;
 #ifdef _WIN32
-            // Windows: Use VirtualAlloc to allocate virtual memory
-            // MEM_COMMIT | MEM_RESERVE: Reserve and commit memory
-            // PAGE_READWRITE: Readable and writable
-            std::cout << "Calling VirtualAlloc" << std::endl;
             memory = VirtualAlloc(nullptr, actual_block_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-            std::cout << "VirtualAlloc returned: " << memory << std::endl;
 #else
-            // Linux: Use mmap to allocate memory
-            // MAP_PRIVATE | MAP_ANONYMOUS: Private, anonymous mapping
-            // PROT_READ | PROT_WRITE: Readable and writable
             memory = mmap(nullptr, actual_block_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 #endif
 
             if (!memory) {
-                std::cerr << "Failed to allocate memory" << std::endl;
+                std::cerr << "Failed to allocate memory for object pool block" << std::endl;
                 throw std::bad_alloc();
             }
 
-            // Initialize block header
             BlockHeader* block = reinterpret_cast<BlockHeader*>(memory);
             block->used.store(0, std::memory_order_release);
             block->capacity = objects_per_block_;
@@ -233,7 +218,6 @@ private:
             do {
                 block->next.store(old_head, std::memory_order_release);
             } while (!head_block_.compare_exchange_weak(old_head, block, std::memory_order_acq_rel, std::memory_order_acquire));
-            std::cout << "Block allocated successfully" << std::endl;
         } catch (const std::exception& e) {
             std::cerr << "Exception in allocate_block: " << e.what() << std::endl;
             throw;

@@ -101,7 +101,8 @@ public:
                         used, used + 1,
                         std::memory_order_acq_rel,
                         std::memory_order_acquire)) {
-                    return reinterpret_cast<T*>(block->data + sizeof(T) * used);
+                    return reinterpret_cast<T*>(
+                        reinterpret_cast<char*>(block) + sizeof(BlockHeader) + sizeof(T) * used);
                 }
             }
             block = block->next.load(std::memory_order_acquire);
@@ -121,7 +122,8 @@ public:
                     used, used + 1,
                     std::memory_order_acq_rel,
                     std::memory_order_acquire)) {
-                return reinterpret_cast<T*>(head->data + sizeof(T) * used);
+                return reinterpret_cast<T*>(
+                    reinterpret_cast<char*>(head) + sizeof(BlockHeader) + sizeof(T) * used);
             }
         }
     }
@@ -157,7 +159,8 @@ public:
         while (block) {
             size_t used = block->used.load(std::memory_order_acquire);
             for (size_t i = 0; i < used; ++i) {
-                T* obj = reinterpret_cast<T*>(block->data + sizeof(T) * i);
+                T* obj = reinterpret_cast<T*>(
+                    reinterpret_cast<char*>(block) + sizeof(BlockHeader) + sizeof(T) * i);
                 func(obj);
             }
             block = block->next.load(std::memory_order_acquire);
@@ -182,7 +185,8 @@ public:
             size_t used = b->used.load(std::memory_order_acquire);
             if (index < current_index + used) {
                 size_t offset = index - current_index;
-                return *reinterpret_cast<T*>(b->data + sizeof(T) * offset);
+                return *reinterpret_cast<T*>(
+                    reinterpret_cast<char*>(b) + sizeof(BlockHeader) + sizeof(T) * offset);
             }
             current_index += used;
         }

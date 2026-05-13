@@ -100,3 +100,11 @@ deps/glfw-*/docs/
 
 # imgui temp build files
 imgui_temp/
+
+# Test output directories
+test_output/
+test_output_big/
+test_output_clean/
+
+# Temp uploads
+temp_uploads/

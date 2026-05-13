@@ -3103,7 +3103,6 @@ void RenderManager::loadFile(const std::string& filename) {
     hhb::core::StlParser parser;
     hhb::core::ParserResult result = parser.parse(filename, *trianglePool);
     
-    // 记录加载结束时间
     auto load_end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> load_duration = load_end - load_start;
     loadTime = static_cast<float>(load_duration.count());
@@ -3156,16 +3155,15 @@ void RenderManager::loadFile(const std::string& filename) {
         geometryExpert.loadModelFromPool(*trianglePool);
         std::cout << "Model loaded into GeometryExpert from shared pool" << std::endl;
         
-        // 捕获模型的三个视角
-        std::string modelName = filename.substr(filename.find_last_of("\\/") + 1);
-        modelName = modelName.substr(0, modelName.find_last_of("."));
-        captureModelViews(modelName);
+        if (!automationMode) {
+            std::string modelName = filename.substr(filename.find_last_of("\\/") + 1);
+            modelName = modelName.substr(0, modelName.find_last_of("."));
+            captureModelViews(modelName);
+        }
         
-        printf("Model loading complete. Triangle count: %zu\n", triangleCount);
-        fflush(stdout);
+        std::cout << "Model loading complete. Triangle count: " << triangleCount << std::endl;
     } else {
-        printf("Failed to load file: %s\n", result.error.c_str());
-        fflush(stdout);
+        std::cerr << "Failed to load file: " << result.error << std::endl;
     }
 }
 

@@ -196,12 +196,42 @@ streamlit run app.py --server.port 8501
 
 ### Web UI 操作流程
 
-1. **上传模型**：拖拽或点击上传 STL/STEP/OBJ 文件
+1. **上传模型**：拖拽或点击上传 STL/STEP/OBJ 文件，上传CAD模型【在左侧面板 「📁 Upload CAD Models」 区域：】
+   - 支持格式： STL、STEP/STP、IGES/IGS、OBJ
+   - 可以上传多个文件（多物体会启用多目标场景合成）
+   - STL文件最简单直接，STEP文件需要额外安装 cadquery 或 FreeCAD 来转换
 2. **设置参数**：
-   - 生成图片数量（100-50000，取决于许可证）
-   - 图片分辨率（默认 800×600）
-   - 相机半径（默认 5.0）
-   - 模型单位（mm/m/cm/inch）
+   - Sample Count：生成多少张360°视角图
+     - 推荐值100-500（测试用10-20即可）
+   - Camera Radius，相机离模型中心的距离
+     - 推荐值：5.0（小模型），10-15（大模型）
+   - Width/Height，输出图像分辨率
+     - 推荐值，800×600（默认）
+   - Generate Semantic Masks，语义分割Mask
+     - ✅ 勾选
+   - Generate Depth Maps，深度图
+     - 推荐值，按需勾选（机器人抓取需要）
+   - Export Camera Poses，6DoF相机位姿
+     - ✅ 勾选
+   - Model Unit，模型单位
+     - mm（STEP默认），STL通常也是mm
+   - ### 高级设置（可选展开）🎯 Instance Segmentation & Multi-Object ：
+     - Instance-Level Segmentation ：✅ 推荐，每个孔/螺栓都有唯一ID
+     - Multi-Object Scene ：上传多个模型时自动启用，随机摆放+碰撞检测
+     🎲 Domain Randomization ：
+     - Light Randomization ：随机光照角度/强度/色温
+     - Camera Jitter ：相机位置微抖动
+     - Background Randomization ：随机背景图
+     🔬 STEP Topology Ground Truth ：
+     - 上传STEP文件可获取 精确的面类型标签 （不是曲率估算）
+     - 需要安装 pip install cadquery
+     🎨 Sim-to-Real Enhancement ：
+     - 高斯噪声、运动模糊、遮挡模拟等，弥合仿真-现实差距
+   ### 第四步：点击生成
+     - 右侧面板确认 ✅ C++ Engine 状态为绿色
+     - 点击 🚀 Start Generation
+     - 等待进度条完成
+     - 下载ZIP包
 3. **选择功能**：
    - ✅ 语义分割 Mask
    - ✅ 实例分割 Mask

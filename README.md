@@ -227,7 +227,7 @@ streamlit run app.py --server.port 8501
      - 需要安装 pip install cadquery
      🎨 Sim-to-Real Enhancement ：
      - 高斯噪声、运动模糊、遮挡模拟等，弥合仿真-现实差距
-   ### 第四步：点击生成
+   ### 点击生成
      - 右侧面板确认 ✅ C++ Engine 状态为绿色
      - 点击 🚀 Start Generation
      - 等待进度条完成

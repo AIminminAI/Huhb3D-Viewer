@@ -1,0 +1,54 @@
+FROM continuumio/miniconda3:latest
+
+# Metadata
+LABEL maintainer="Huhb3D"
+LABEL description="Huhb3D Cloud - STEP to 6DoF Dataset Generator"
+
+# Install system dependencies for OSMesa (headless OpenGL)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libosmesa6-dev \
+    libgl1-mesa-glx \
+    libgl1-mesa-dev \
+    libglew-dev \
+    libglfw3 \
+    libglfw3-dev \
+    libx11-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libxi-dev \
+    libxxf86vm-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment for headless rendering
+ENV PYOPENGL_PLATFORM=osmesa
+ENV MESA_GL_VERSION_OVERRIDE=4.5
+ENV MESA_GLSL_VERSION_OVERRIDE=450
+
+# Set working directory
+WORKDIR /app
+
+# Install cadquery via conda (most reliable way for pythonOCP)
+RUN conda install -y -c conda-forge cadquery && conda clean -afy
+
+# Copy requirements and install remaining Python dependencies
+COPY requirements.cloud.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY huhb3d_cloud_app.py .
+COPY step_topology_parser.py .
+
+# Demo data directory (optional)
+RUN mkdir -p ./sell_Huhb3D-Industrial-100
+
+# Expose Gradio port
+EXPOSE 7860
+
+# Set Gradio server settings for HuggingFace Spaces
+ENV GRADIO_SERVER_NAME=0.0.0.0
+ENV GRADIO_SERVER_PORT=7860
+ENV GRADIO_ANALYTICS_ENABLED=0
+
+# Run the application
+CMD ["python", "huhb3d_cloud_app.py"]

@@ -1,0 +1,45 @@
+name: Update AI Frontier Data
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run daily at 2:00 UTC (10:00 Beijing time)
+  workflow_dispatch:  # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run update script
+        run: python update_frontier.py
+
+      - name: Run AI knowledge update script
+        run: python update_ai_knowledge.py
+
+      - name: Check for changes (including knowledge updates)
+        id: check_changes
+        run: |
+          if git diff --quiet docs/frontier-data.json docs/ai-knowledge-updates.json; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/frontier-data.json docs/ai-knowledge-updates.json
+          git commit -m "auto: Update AI frontier & knowledge data $(date +%Y-%m-%d)"
+          git push

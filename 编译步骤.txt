@@ -1,0 +1,12 @@
+打开 "x64 Native Tools Command Prompt for VS 2022" ，运行：
+
+```
+cd 
+d:\Huhb\AIProject\Huhb-Utopia-Project\Huhb-
+Viewer-ThreeAIExtend\Huhb3D-Viewer-AIHelper
+-RoboDataSynthesizer
+cmake -B build -S . -G "NMake Makefiles" 
+-DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+编译成功后双击

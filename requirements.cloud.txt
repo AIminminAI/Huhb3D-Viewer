@@ -1,0 +1,18 @@
+# Huhb3D Cloud App - Python Dependencies
+# ========================================
+# NOTE: cadquery is installed via conda in Dockerfile (not pip)
+# Core rendering
+pyrender>=0.1.45
+trimesh>=4.0.0
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# Web interface
+gradio>=4.0.0
+
+# OpenGL support (headless rendering via OSMesa)
+PyOpenGL>=3.1.7
+PyOpenGL-accelerate>=3.1.7
+
+# Image processing
+opencv-python-headless>=4.8.0

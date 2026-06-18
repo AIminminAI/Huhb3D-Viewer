@@ -1,0 +1,23 @@
+# Replicate Cog 配置 — STEP 拓扑提取模型（纯 CPU）
+# ======================================================
+# 核心差异化：无需 GPU、无需 Blender，仅做 STEP 拓扑提取 + 抓取推荐
+# 运行成本极低，商业 API 的关键卖点
+#
+# 构建: cog build
+# 推送: cog push r8.im/your-username/huhb3d-topology-extractor
+# 测试: cog predict -i step_file=@model.step
+
+build:
+  gpu: false
+  system_packages:
+    - libgl1-mesa-glx
+    - libegl1
+  python_version: "3.10"
+  python_packages:
+    - "cadquery>=2.3"
+    - "Ocp-V7"
+    - "numpy>=1.24"
+  run:
+    - pip install Ocp-V7 || true
+
+predict: "predict.py:Predictor"

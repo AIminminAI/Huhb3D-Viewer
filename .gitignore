@@ -1,0 +1,158 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# CMake
+build/
+build_v2/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Thumbs.db:encryptable
+
+# IDEs
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv
+venv/
+
+# Node
+node_modules/
+
+# Generated output (large files)
+streamlit_output/
+run_*.zip
+
+# Large model files
+*.stl
+!Cube.stl
+!Sphere.stl
+
+# Large zip archives
+*.zip
+!deps/*.zip
+
+# Demo output
+Huhb_CAD_Viewer_Demo/
+imgui.ini
+
+# Logs
+*.log
+build_err.txt
+build_log.txt
+
+# Large media files
+*.mp4
+*.avi
+*.mov
+
+# GLFW docs (too large for git)
+deps/glfw-*/docs/
+
+# imgui temp build files
+imgui_temp/
+
+# Test output directories
+test_output/
+test_output_big/
+test_output_clean/
+
+# Temp uploads
+temp_uploads/
+
+# 商业产品输出（ZIP和大文件，不提交到Git）
+products/
+industry_packages/
+hf_preview/
+Huhb3D-Topology-Dataset/
+Huhb3D-Precision-Benchmark/
+Huhb3D-Sim2Real-500/
+Huhb3D-Sim2Real-Test/
+sell_Huhb3D-Test-Precision-v4-aug/
+checkpoints/
+
+# Token 文件（敏感信息）
+.gumroad_token
+.replicate_token
+*.pem
+*.key
+*.keystore
+secrets.json
+credentials.json
+*.token
+.env.local
+.env.production
+*.db
+*.sqlite
+
+# 大文件：模型权重、数据集、ZIP包（不应放入Git）
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+sell_Huhb3D-*/
+Huhb-Utopia-Project.zip
+Huhb_CAD_Viewer_Demo/*.stl
+
+# SHA256 校验和文件（由脚本生成）
+*.sha256
+
+# Test scripts (local)
+test_ai_modules.py
+test_mcp_server.py
+test_audit.py
+test_space_api.py

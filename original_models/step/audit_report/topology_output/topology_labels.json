@@ -1,0 +1,531 @@
+{
+  "source_file": "hex_bolt.step",
+  "total_triangles": 220,
+  "total_faces": 17,
+  "shape_bounds": [
+    -9.0,
+    -7.7942,
+    0.0,
+    9.0,
+    7.7942,
+    47.0
+  ],
+  "linear_deflection": 0.1,
+  "angular_deflection": 0.5,
+  "category_names": {
+    "0": "FreeSurface",
+    "1": "HorizontalPlane",
+    "2": "LateralPlane_X",
+    "3": "LateralPlane_Z",
+    "4": "NearHorizontal",
+    "5": "NearLateral_X",
+    "6": "NearLateral_Z",
+    "7": "Degenerate",
+    "8": "ConvexFeature_Bolt",
+    "9": "ConcaveFeature_Hole",
+    "10": "Flange",
+    "11": "Boss",
+    "12": "Chamfer",
+    "13": "Fillet",
+    "14": "SphericalSurface"
+  },
+  "triangle_labels": [
+    5,
+    5,
+    5,
+    5,
+    6,
+    6,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    1,
+    1,
+    1,
+    1,
+    6,
+    6,
+    3,
+    3,
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    5,
+    5,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    11,
+    4,
+    4,
+    6,
+    6,
+    6,
+    6,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    12,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+  ],
+  "faces": [
+    {
+      "face_id": 0,
+      "geom_type": "PLANE",
+      "category_id": 5,
+      "category_name": "NearLateral_X",
+      "area": 56.25,
+      "triangle_count": 2,
+      "triangle_start": 0,
+      "extra": {
+        "normal": [
+          0.866025403784329,
+          0.50000000000019,
+          -0.0
+        ]
+      }
+    },
+    {
+      "face_id": 1,
+      "geom_type": "PLANE",
+      "category_id": 5,
+      "category_name": "NearLateral_X",
+      "area": 56.25,
+      "triangle_count": 2,
+      "triangle_start": 2,
+      "extra": {
+        "normal": [
+          -0.866025403784329,
+          0.50000000000019,
+          0.0
+        ]
+      }
+    },
+    {
+      "face_id": 2,
+      "geom_type": "PLANE",
+      "category_id": 6,
+      "category_name": "NearLateral_Z",
+      "area": 9.086662,
+      "triangle_count": 2,
+      "triangle_start": 4,
+      "extra": {
+        "normal": [
+          0.6123724356957863,
+          0.3535533905928766,
+          -0.7071067811867532
+        ]
+      }
+    },
+    {
+      "face_id": 3,
+      "geom_type": "PLANE",
+      "category_id": 3,
+      "category_name": "LateralPlane_Z",
+      "area": 131.904357,
+      "triangle_count": 32,
+      "triangle_start": 6,
+      "extra": {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "face_id": 4,
+      "geom_type": "PLANE",
+      "category_id": 1,
+      "category_name": "HorizontalPlane",
+      "area": 56.25,
+      "triangle_count": 2,
+      "triangle_start": 38,
+      "extra": {
+        "normal": [
+          9.868649107779e-17,
+          1.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "face_id": 5,
+      "geom_type": "PLANE",
+      "category_id": 1,
+      "category_name": "HorizontalPlane",
+      "area": 56.25,
+      "triangle_count": 2,
+      "triangle_start": 40,
+      "extra": {
+        "normal": [
+          5.921189464668e-16,
+          1.0,
+          -0.0
+        ]
+      }
+    },
+    {
+      "face_id": 6,
+      "geom_type": "PLANE",
+      "category_id": 6,
+      "category_name": "NearLateral_Z",
+      "area": 9.086662,
+      "triangle_count": 2,
+      "triangle_start": 42,
+      "extra": {
+        "normal": [
+          -0.6123724356957863,
+          0.3535533905928766,
+          0.7071067811867532
+        ]
+      }
+    },
+    {
+      "face_id": 7,
+      "geom_type": "PLANE",
+      "category_id": 3,
+      "category_name": "LateralPlane_Z",
+      "area": 171.89273,
+      "triangle_count": 4,
+      "triangle_start": 44,
+      "extra": {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "face_id": 8,
+      "geom_type": "PLANE",
+      "category_id": 4,
+      "category_name": "NearHorizontal",
+      "area": 9.086662,
+      "triangle_count": 2,
+      "triangle_start": 48,
+      "extra": {
+        "normal": [
+          5.582252815857429e-17,
+          0.7071067811865476,
+          -0.7071067811865476
+        ]
+      }
+    },
+    {
+      "face_id": 9,
+      "geom_type": "PLANE",
+      "category_id": 5,
+      "category_name": "NearLateral_X",
+      "area": 56.25,
+      "triangle_count": 2,
+      "triangle_start": 50,
+      "extra": {
+        "normal": [
+          -0.866025403784329,
+          0.50000000000019,
+          -0.0
+        ]
+      }
+    },
+    {
+      "face_id": 10,
+      "geom_type": "PLANE",
+      "category_id": 5,
+      "category_name": "NearLateral_X",
+      "area": 56.25,
+      "triangle_count": 2,
+      "triangle_start": 52,
+      "extra": {
+        "normal": [
+          0.866025403784329,
+          0.50000000000019,
+          -0.0
+        ]
+      }
+    },
+    {
+      "face_id": 11,
+      "geom_type": "CYLINDER",
+      "category_id": 11,
+      "category_name": "Boss",
+      "area": 1209.513172,
+      "triangle_count": 52,
+      "triangle_start": 54,
+      "extra": {
+        "radius": 5.0,
+        "axis_direction": [
+          -0.0,
+          -0.0,
+          -1.0
+        ]
+      }
+    },
+    {
+      "face_id": 12,
+      "geom_type": "PLANE",
+      "category_id": 4,
+      "category_name": "NearHorizontal",
+      "area": 9.086662,
+      "triangle_count": 2,
+      "triangle_start": 106,
+      "extra": {
+        "normal": [
+          4.3960240924871875e-16,
+          0.7071067811865476,
+          0.7071067811865476
+        ]
+      }
+    },
+    {
+      "face_id": 13,
+      "geom_type": "PLANE",
+      "category_id": 6,
+      "category_name": "NearLateral_Z",
+      "area": 9.086662,
+      "triangle_count": 2,
+      "triangle_start": 108,
+      "extra": {
+        "normal": [
+          -0.6123724356957863,
+          0.3535533905928766,
+          -0.7071067811867532
+        ]
+      }
+    },
+    {
+      "face_id": 14,
+      "geom_type": "PLANE",
+      "category_id": 6,
+      "category_name": "NearLateral_Z",
+      "area": 9.086662,
+      "triangle_count": 2,
+      "triangle_start": 110,
+      "extra": {
+        "normal": [
+          0.6123724356957863,
+          0.3535533905928766,
+          0.7071067811867532
+        ]
+      }
+    },
+    {
+      "face_id": 15,
+      "geom_type": "CONE",
+      "category_id": 12,
+      "category_name": "Chamfer",
+      "area": 56.646757,
+      "triangle_count": 84,
+      "triangle_start": 112,
+      "extra": {
+        "half_angle_deg": 45.0,
+        "ref_radius": 5.0,
+        "axis_direction": [
+          -0.0,
+          -0.0,
+          -1.0
+        ]
+      }
+    },
+    {
+      "face_id": 16,
+      "geom_type": "PLANE",
+      "category_id": 3,
+      "category_name": "LateralPlane_Z",
+      "area": 38.48451,
+      "triangle_count": 24,
+      "triangle_start": 196,
+      "extra": {
+        "normal": [
+          0.0,
+          0.0,
+          1.0
+        ]
+      }
+    }
+  ]
+}

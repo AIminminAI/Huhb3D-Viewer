@@ -1,0 +1,57 @@
+{
+  "source_file": "hex_bolt.step",
+  "total_faces": 17,
+  "total_triangles": 220,
+  "shape_bounds": [
+    -9.0,
+    -7.7942,
+    0.0,
+    9.0,
+    7.7942,
+    47.0
+  ],
+  "categories": {
+    "1": {
+      "name": "HorizontalPlane",
+      "face_count": 2,
+      "triangle_count": 4,
+      "total_area": 112.5
+    },
+    "3": {
+      "name": "LateralPlane_Z",
+      "face_count": 3,
+      "triangle_count": 60,
+      "total_area": 342.281597
+    },
+    "4": {
+      "name": "NearHorizontal",
+      "face_count": 2,
+      "triangle_count": 4,
+      "total_area": 18.173324
+    },
+    "5": {
+      "name": "NearLateral_X",
+      "face_count": 4,
+      "triangle_count": 8,
+      "total_area": 225.0
+    },
+    "6": {
+      "name": "NearLateral_Z",
+      "face_count": 4,
+      "triangle_count": 8,
+      "total_area": 36.346648
+    },
+    "11": {
+      "name": "Boss",
+      "face_count": 1,
+      "triangle_count": 52,
+      "total_area": 1209.513172
+    },
+    "12": {
+      "name": "Chamfer",
+      "face_count": 1,
+      "triangle_count": 84,
+      "total_area": 56.646757
+    }
+  }
+}

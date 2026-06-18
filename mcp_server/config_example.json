@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "huhb3d": {
+      "command": "uvx",
+      "args": ["huhb3d-mcp"]
+    }
+  }
+}

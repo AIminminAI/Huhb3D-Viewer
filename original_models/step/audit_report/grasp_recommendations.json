@@ -1,0 +1,383 @@
+{
+  "source_file": "hex_bolt.step",
+  "object_bounds": [
+    -9.0,
+    -7.7942,
+    0.0,
+    9.0,
+    7.7942,
+    47.0
+  ],
+  "best_grasp_strategy": {
+    "method": "lateral_pinch",
+    "gripper_type": "parallel_jaw",
+    "target_face_id": 11,
+    "approach_direction": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "confidence": 0.8,
+    "reasoning": "凸台 (半径 5.0mm, 面积 1209.5 mm²) 适合平行爪夹持"
+  },
+  "face_recommendations": [
+    {
+      "face_id": 0,
+      "category_name": "NearLateral_X",
+      "geom_type": "PLANE",
+      "area": 56.25,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        -0.866,
+        -0.5,
+        0.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.65,
+      "notes": "近X向垂直面，壁虎/真空吸附"
+    },
+    {
+      "face_id": 1,
+      "category_name": "NearLateral_X",
+      "geom_type": "PLANE",
+      "area": 56.25,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        0.866,
+        -0.5,
+        -0.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.65,
+      "notes": "近X向垂直面，壁虎/真空吸附"
+    },
+    {
+      "face_id": 2,
+      "category_name": "NearLateral_Z",
+      "geom_type": "PLANE",
+      "area": 9.086662,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        -0.6124,
+        -0.3536,
+        0.7071
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.33,
+      "notes": "近Z向垂直面，壁虎/真空吸附"
+    },
+    {
+      "face_id": 3,
+      "category_name": "LateralPlane_Z",
+      "geom_type": "PLANE",
+      "area": 131.904357,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        -0.0,
+        -0.0,
+        -1.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.7,
+      "notes": "Z向垂直平面，壁虎/真空吸附"
+    },
+    {
+      "face_id": 4,
+      "category_name": "HorizontalPlane",
+      "geom_type": "PLANE",
+      "area": 56.25,
+      "grasp_method": "vacuum_grip",
+      "gripper_type": "vacuum_cup",
+      "approach_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.7,
+      "notes": "水平平面，适合真空吸附"
+    },
+    {
+      "face_id": 5,
+      "category_name": "HorizontalPlane",
+      "geom_type": "PLANE",
+      "area": 56.25,
+      "grasp_method": "vacuum_grip",
+      "gripper_type": "vacuum_cup",
+      "approach_direction": [
+        -0.0,
+        -1.0,
+        0.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.7,
+      "notes": "水平平面，适合真空吸附"
+    },
+    {
+      "face_id": 6,
+      "category_name": "NearLateral_Z",
+      "geom_type": "PLANE",
+      "area": 9.086662,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        0.6124,
+        -0.3536,
+        -0.7071
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.33,
+      "notes": "近Z向垂直面，壁虎/真空吸附"
+    },
+    {
+      "face_id": 7,
+      "category_name": "LateralPlane_Z",
+      "geom_type": "PLANE",
+      "area": 171.89273,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        -0.0,
+        -0.0,
+        -1.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.7,
+      "notes": "Z向垂直平面，壁虎/真空吸附"
+    },
+    {
+      "face_id": 8,
+      "category_name": "NearHorizontal",
+      "geom_type": "PLANE",
+      "area": 9.086662,
+      "grasp_method": "vacuum_grip",
+      "gripper_type": "vacuum_cup",
+      "approach_direction": [
+        -0.0,
+        -0.7071,
+        0.7071
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.35,
+      "notes": "近水平面，可真空吸附"
+    },
+    {
+      "face_id": 9,
+      "category_name": "NearLateral_X",
+      "geom_type": "PLANE",
+      "area": 56.25,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        0.866,
+        -0.5,
+        0.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.65,
+      "notes": "近X向垂直面，壁虎/真空吸附"
+    },
+    {
+      "face_id": 10,
+      "category_name": "NearLateral_X",
+      "geom_type": "PLANE",
+      "area": 56.25,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        -0.866,
+        -0.5,
+        0.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.65,
+      "notes": "近X向垂直面，壁虎/真空吸附"
+    },
+    {
+      "face_id": 11,
+      "category_name": "Boss",
+      "geom_type": "CYLINDER",
+      "area": 1209.513172,
+      "grasp_method": "lateral_pinch",
+      "gripper_type": "parallel_jaw",
+      "approach_direction": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.8,
+      "notes": "凸台特征，建议平行爪夹持"
+    },
+    {
+      "face_id": 12,
+      "category_name": "NearHorizontal",
+      "geom_type": "PLANE",
+      "area": 9.086662,
+      "grasp_method": "vacuum_grip",
+      "gripper_type": "vacuum_cup",
+      "approach_direction": [
+        -0.0,
+        -0.7071,
+        -0.7071
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.35,
+      "notes": "近水平面，可真空吸附"
+    },
+    {
+      "face_id": 13,
+      "category_name": "NearLateral_Z",
+      "geom_type": "PLANE",
+      "area": 9.086662,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        0.6124,
+        -0.3536,
+        0.7071
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.33,
+      "notes": "近Z向垂直面，壁虎/真空吸附"
+    },
+    {
+      "face_id": 14,
+      "category_name": "NearLateral_Z",
+      "geom_type": "PLANE",
+      "area": 9.086662,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        -0.6124,
+        -0.3536,
+        -0.7071
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.33,
+      "notes": "近Z向垂直面，壁虎/真空吸附"
+    },
+    {
+      "face_id": 15,
+      "category_name": "Chamfer",
+      "geom_type": "CONE",
+      "area": 56.646757,
+      "grasp_method": "edge_grip",
+      "gripper_type": "parallel_jaw",
+      "approach_direction": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.5,
+      "notes": "倒角边缘，建议边缘夹持"
+    },
+    {
+      "face_id": 16,
+      "category_name": "LateralPlane_Z",
+      "geom_type": "PLANE",
+      "area": 38.48451,
+      "grasp_method": "surface_grip",
+      "gripper_type": "vacuum_cup_or_gecko",
+      "approach_direction": [
+        -0.0,
+        -0.0,
+        -1.0
+      ],
+      "grasp_point": [
+        0.0,
+        0.0,
+        23.5
+      ],
+      "confidence": 0.7,
+      "notes": "Z向垂直平面，壁虎/真空吸附"
+    }
+  ],
+  "grasp_method_summary": {
+    "surface_grip": {
+      "face_count": 11,
+      "total_area": 603.63
+    },
+    "vacuum_grip": {
+      "face_count": 4,
+      "total_area": 130.67
+    },
+    "lateral_pinch": {
+      "face_count": 1,
+      "total_area": 1209.51
+    },
+    "edge_grip": {
+      "face_count": 1,
+      "total_area": 56.65
+    }
+  }
+}

@@ -1,0 +1,570 @@
+{
+  "generator": "generate_original_models.py",
+  "generated_at": "2026-06-02T13:39:02.526365+00:00",
+  "legal_basis": {
+    "models_are_original_works": true,
+    "cadquery_license": "Apache-2.0",
+    "opencascade_license": "LGPL-2.1",
+    "no_third_party_copyrighted_input": true,
+    "output_models_license": "CC0-1.0 (public domain)"
+  },
+  "models": [
+    {
+      "part_type": "Flange",
+      "standard": "DIN-style",
+      "parameters": {
+        "outer_radius_mm": 50,
+        "inner_radius_mm": 15,
+        "bolt_circle_radius_mm": 35,
+        "bolt_hole_radius_mm": 4.5,
+        "bolt_count": 6,
+        "thickness_mm": 12,
+        "hub_radius_mm": 22,
+        "hub_height_mm": 20
+      },
+      "features": [
+        "bolt_holes",
+        "hub",
+        "through_hole",
+        "fillets"
+      ],
+      "feature_types": {
+        "bolt_holes": "ConcaveFeature_Hole",
+        "through_hole": "ConcaveFeature_Hole",
+        "hub": "ConvexFeature_Bolt",
+        "top_face": "HorizontalPlane",
+        "bottom_face": "HorizontalPlane",
+        "side_face": "LateralPlane"
+      },
+      "step_file": "step/flange.step",
+      "stl_file": "stl/flange.stl",
+      "model_id": 0,
+      "name": "flange"
+    },
+    {
+      "part_type": "Flange",
+      "standard": "DIN-style",
+      "parameters": {
+        "outer_radius_mm": 35,
+        "inner_radius_mm": 10,
+        "bolt_circle_radius_mm": 35,
+        "bolt_hole_radius_mm": 4.5,
+        "bolt_count": 4,
+        "thickness_mm": 8,
+        "hub_radius_mm": 22,
+        "hub_height_mm": 20
+      },
+      "features": [
+        "bolt_holes",
+        "hub",
+        "through_hole",
+        "fillets"
+      ],
+      "feature_types": {
+        "bolt_holes": "ConcaveFeature_Hole",
+        "through_hole": "ConcaveFeature_Hole",
+        "hub": "ConvexFeature_Bolt",
+        "top_face": "HorizontalPlane",
+        "bottom_face": "HorizontalPlane",
+        "side_face": "LateralPlane"
+      },
+      "step_file": "step/flange_small.step",
+      "stl_file": "stl/flange_small.stl",
+      "model_id": 1,
+      "name": "flange_small"
+    },
+    {
+      "part_type": "Flange",
+      "standard": "DIN-style",
+      "parameters": {
+        "outer_radius_mm": 50,
+        "inner_radius_mm": 15,
+        "bolt_circle_radius_mm": 35,
+        "bolt_hole_radius_mm": 4.5,
+        "bolt_count": 6,
+        "thickness_mm": 12,
+        "hub_radius_mm": 22,
+        "hub_height_mm": 20
+      },
+      "features": [
+        "bolt_holes",
+        "hub",
+        "through_hole",
+        "fillets"
+      ],
+      "feature_types": {
+        "bolt_holes": "ConcaveFeature_Hole",
+        "through_hole": "ConcaveFeature_Hole",
+        "hub": "ConvexFeature_Bolt",
+        "top_face": "HorizontalPlane",
+        "bottom_face": "HorizontalPlane",
+        "side_face": "LateralPlane"
+      },
+      "step_file": "step/flange_medium.step",
+      "stl_file": "stl/flange_medium.stl",
+      "model_id": 2,
+      "name": "flange_medium"
+    },
+    {
+      "part_type": "Flange",
+      "standard": "DIN-style",
+      "parameters": {
+        "outer_radius_mm": 70,
+        "inner_radius_mm": 20,
+        "bolt_circle_radius_mm": 35,
+        "bolt_hole_radius_mm": 4.5,
+        "bolt_count": 8,
+        "thickness_mm": 16,
+        "hub_radius_mm": 22,
+        "hub_height_mm": 20
+      },
+      "features": [
+        "bolt_holes",
+        "hub",
+        "through_hole",
+        "fillets"
+      ],
+      "feature_types": {
+        "bolt_holes": "ConcaveFeature_Hole",
+        "through_hole": "ConcaveFeature_Hole",
+        "hub": "ConvexFeature_Bolt",
+        "top_face": "HorizontalPlane",
+        "bottom_face": "HorizontalPlane",
+        "side_face": "LateralPlane"
+      },
+      "step_file": "step/flange_large.step",
+      "stl_file": "stl/flange_large.stl",
+      "model_id": 3,
+      "name": "flange_large"
+    },
+    {
+      "part_type": "HexBolt",
+      "standard": "ISO 4014 style",
+      "parameters": {
+        "head_diameter_mm": 18,
+        "head_height_mm": 7,
+        "shaft_diameter_mm": 10,
+        "shaft_length_mm": 40
+      },
+      "features": [
+        "hex_head",
+        "shaft",
+        "chamfer"
+      ],
+      "feature_types": {
+        "hex_head": "ConvexFeature_Bolt",
+        "shaft": "FreeSurface",
+        "top_face": "HorizontalPlane",
+        "bottom_face": "HorizontalPlane"
+      },
+      "step_file": "step/hex_bolt.step",
+      "stl_file": "stl/hex_bolt.stl",
+      "model_id": 4,
+      "name": "hex_bolt"
+    },
+    {
+      "part_type": "BearingBlock",
+      "standard": "Pillow-block style",
+      "parameters": {
+        "width_mm": 60,
+        "height_mm": 40,
+        "depth_mm": 30,
+        "bore_radius_mm": 15,
+        "mount_hole_spacing_mm": 40
+      },
+      "features": [
+        "bore",
+        "mount_holes",
+        "fillets"
+      ],
+      "feature_types": {
+        "bore": "ConcaveFeature_Hole",
+        "mount_holes": "ConcaveFeature_Hole",
+        "top_face": "HorizontalPlane",
+        "side_faces": "LateralPlane"
+      },
+      "step_file": "step/bearing_block.step",
+      "stl_file": "stl/bearing_block.stl",
+      "model_id": 5,
+      "name": "bearing_block"
+    },
+    {
+      "part_type": "BearingBlock",
+      "standard": "Pillow-block style",
+      "parameters": {
+        "width_mm": 40,
+        "height_mm": 30,
+        "depth_mm": 30,
+        "bore_radius_mm": 10,
+        "mount_hole_spacing_mm": 40
+      },
+      "features": [
+        "bore",
+        "mount_holes",
+        "fillets"
+      ],
+      "feature_types": {
+        "bore": "ConcaveFeature_Hole",
+        "mount_holes": "ConcaveFeature_Hole",
+        "top_face": "HorizontalPlane",
+        "side_faces": "LateralPlane"
+      },
+      "step_file": "step/bearing_small.step",
+      "stl_file": "stl/bearing_small.stl",
+      "model_id": 6,
+      "name": "bearing_small"
+    },
+    {
+      "part_type": "BearingBlock",
+      "standard": "Pillow-block style",
+      "parameters": {
+        "width_mm": 60,
+        "height_mm": 40,
+        "depth_mm": 30,
+        "bore_radius_mm": 15,
+        "mount_hole_spacing_mm": 40
+      },
+      "features": [
+        "bore",
+        "mount_holes",
+        "fillets"
+      ],
+      "feature_types": {
+        "bore": "ConcaveFeature_Hole",
+        "mount_holes": "ConcaveFeature_Hole",
+        "top_face": "HorizontalPlane",
+        "side_faces": "LateralPlane"
+      },
+      "step_file": "step/bearing_medium.step",
+      "stl_file": "stl/bearing_medium.stl",
+      "model_id": 7,
+      "name": "bearing_medium"
+    },
+    {
+      "part_type": "StepShaft",
+      "standard": "Custom",
+      "parameters": {
+        "segments": [
+          {
+            "radius": 20,
+            "length": 15
+          },
+          {
+            "radius": 15,
+            "length": 25
+          },
+          {
+            "radius": 10,
+            "length": 20
+          },
+          {
+            "radius": 15,
+            "length": 15
+          }
+        ]
+      },
+      "features": [
+        "steps",
+        "shoulders"
+      ],
+      "feature_types": {
+        "shoulders": "ConvexFeature_Bolt",
+        "shaft_surfaces": "FreeSurface",
+        "step_faces": "HorizontalPlane"
+      },
+      "step_file": "step/step_shaft.step",
+      "stl_file": "stl/step_shaft.stl",
+      "model_id": 8,
+      "name": "step_shaft"
+    },
+    {
+      "part_type": "LBracket",
+      "standard": "Custom",
+      "parameters": {
+        "width_mm": 50,
+        "height_mm": 40,
+        "thickness_mm": 8,
+        "hole_count": 3
+      },
+      "features": [
+        "mount_holes",
+        "corner_fillet"
+      ],
+      "feature_types": {
+        "mount_holes": "ConcaveFeature_Hole",
+        "vertical_face": "LateralPlane",
+        "horizontal_face": "HorizontalPlane"
+      },
+      "step_file": "step/l_bracket.step",
+      "stl_file": "stl/l_bracket.stl",
+      "model_id": 9,
+      "name": "l_bracket"
+    },
+    {
+      "part_type": "SpurGear",
+      "standard": "ISO 1328 style",
+      "parameters": {
+        "module": 2.5,
+        "teeth": 20,
+        "thickness_mm": 15,
+        "bore_radius_mm": 10,
+        "pitch_radius_mm": 25.0
+      },
+      "features": [
+        "teeth",
+        "hub",
+        "bore",
+        "chamfer"
+      ],
+      "feature_types": {
+        "teeth": "ConvexFeature_Bolt",
+        "bore": "ConcaveFeature_Hole",
+        "hub": "ConvexFeature_Bolt",
+        "top_face": "HorizontalPlane"
+      },
+      "step_file": "step/gear.step",
+      "stl_file": "stl/gear.stl",
+      "model_id": 10,
+      "name": "gear"
+    },
+    {
+      "part_type": "SpurGear",
+      "standard": "ISO 1328 style",
+      "parameters": {
+        "module": 2,
+        "teeth": 12,
+        "thickness_mm": 10,
+        "bore_radius_mm": 10,
+        "pitch_radius_mm": 12.0
+      },
+      "features": [
+        "teeth",
+        "hub",
+        "bore",
+        "chamfer"
+      ],
+      "feature_types": {
+        "teeth": "ConvexFeature_Bolt",
+        "bore": "ConcaveFeature_Hole",
+        "hub": "ConvexFeature_Bolt",
+        "top_face": "HorizontalPlane"
+      },
+      "step_file": "step/gear_small.step",
+      "stl_file": "stl/gear_small.stl",
+      "model_id": 11,
+      "name": "gear_small"
+    },
+    {
+      "part_type": "SpurGear",
+      "standard": "ISO 1328 style",
+      "parameters": {
+        "module": 2.5,
+        "teeth": 20,
+        "thickness_mm": 15,
+        "bore_radius_mm": 10,
+        "pitch_radius_mm": 25.0
+      },
+      "features": [
+        "teeth",
+        "hub",
+        "bore",
+        "chamfer"
+      ],
+      "feature_types": {
+        "teeth": "ConvexFeature_Bolt",
+        "bore": "ConcaveFeature_Hole",
+        "hub": "ConvexFeature_Bolt",
+        "top_face": "HorizontalPlane"
+      },
+      "step_file": "step/gear_medium.step",
+      "stl_file": "stl/gear_medium.stl",
+      "model_id": 12,
+      "name": "gear_medium"
+    },
+    {
+      "part_type": "SpurGear",
+      "standard": "ISO 1328 style",
+      "parameters": {
+        "module": 3,
+        "teeth": 30,
+        "thickness_mm": 20,
+        "bore_radius_mm": 10,
+        "pitch_radius_mm": 45.0
+      },
+      "features": [
+        "teeth",
+        "hub",
+        "bore",
+        "chamfer"
+      ],
+      "feature_types": {
+        "teeth": "ConvexFeature_Bolt",
+        "bore": "ConcaveFeature_Hole",
+        "hub": "ConvexFeature_Bolt",
+        "top_face": "HorizontalPlane"
+      },
+      "step_file": "step/gear_large.step",
+      "stl_file": "stl/gear_large.stl",
+      "model_id": 13,
+      "name": "gear_large"
+    },
+    {
+      "part_type": "PipeTee",
+      "standard": "ASME B16.9 style",
+      "parameters": {
+        "main_radius_mm": 20,
+        "main_length_mm": 80,
+        "branch_radius_mm": 15,
+        "branch_length_mm": 50,
+        "wall_thickness_mm": 4
+      },
+      "features": [
+        "main_bore",
+        "branch_bore",
+        "intersection"
+      ],
+      "feature_types": {
+        "main_bore": "ConcaveFeature_Hole",
+        "branch_bore": "ConcaveFeature_Hole",
+        "outer_surface": "FreeSurface"
+      },
+      "step_file": "step/pipe_tee.step",
+      "stl_file": "stl/pipe_tee.stl",
+      "model_id": 14,
+      "name": "pipe_tee"
+    },
+    {
+      "part_type": "MountingPlate",
+      "standard": "Custom",
+      "parameters": {
+        "width_mm": 100,
+        "height_mm": 80,
+        "thickness_mm": 10,
+        "corner_holes": 4,
+        "center_hole_radius_mm": 15
+      },
+      "features": [
+        "corner_holes",
+        "center_hole",
+        "slots",
+        "chamfer"
+      ],
+      "feature_types": {
+        "corner_holes": "ConcaveFeature_Hole",
+        "center_hole": "ConcaveFeature_Hole",
+        "slots": "ConcaveFeature_Hole",
+        "top_face": "HorizontalPlane"
+      },
+      "step_file": "step/mounting_plate.step",
+      "stl_file": "stl/mounting_plate.stl",
+      "model_id": 15,
+      "name": "mounting_plate"
+    },
+    {
+      "part_type": "Coupling",
+      "standard": "Custom",
+      "parameters": {
+        "outer_radius_mm": 25,
+        "length_mm": 50,
+        "bore1_radius_mm": 10,
+        "bore2_radius_mm": 12,
+        "keyway_width_mm": 4
+      },
+      "features": [
+        "bores",
+        "keyway",
+        "bolt_holes",
+        "chamfers"
+      ],
+      "feature_types": {
+        "bores": "ConcaveFeature_Hole",
+        "keyway": "ConcaveFeature_Hole",
+        "bolt_holes": "ConcaveFeature_Hole",
+        "outer_surface": "FreeSurface"
+      },
+      "step_file": "step/coupling.step",
+      "stl_file": "stl/coupling.stl",
+      "model_id": 16,
+      "name": "coupling"
+    },
+    {
+      "part_type": "ValveBody",
+      "standard": "Custom",
+      "parameters": {
+        "body_radius_mm": 30,
+        "body_height_mm": 50,
+        "inlet_radius_mm": 12,
+        "outlet_radius_mm": 12,
+        "wall_thickness_mm": 5
+      },
+      "features": [
+        "inlet",
+        "outlet",
+        "chamber",
+        "flanges"
+      ],
+      "feature_types": {
+        "inlet": "ConcaveFeature_Hole",
+        "outlet": "ConcaveFeature_Hole",
+        "chamber": "ConcaveFeature_Hole",
+        "flanges": "Flange",
+        "outer_surface": "FreeSurface"
+      },
+      "step_file": "step/valve_body.step",
+      "stl_file": "stl/valve_body.stl",
+      "model_id": 17,
+      "name": "valve_body"
+    },
+    {
+      "part_type": "HeatSink",
+      "standard": "Custom",
+      "parameters": {
+        "base_width_mm": 60,
+        "base_depth_mm": 40,
+        "base_thickness_mm": 5,
+        "fin_height_mm": 25,
+        "fin_count": 10
+      },
+      "features": [
+        "fins",
+        "base_plate"
+      ],
+      "feature_types": {
+        "fins": "ConvexFeature_Bolt",
+        "base_plate": "HorizontalPlane",
+        "fin_surfaces": "LateralPlane"
+      },
+      "step_file": "step/heat_sink.step",
+      "stl_file": "stl/heat_sink.stl",
+      "model_id": 18,
+      "name": "heat_sink"
+    },
+    {
+      "part_type": "ConnectorHousing",
+      "standard": "Custom",
+      "parameters": {
+        "width_mm": 40,
+        "height_mm": 30,
+        "depth_mm": 25,
+        "pin_count": 4,
+        "pin_length_mm": 15
+      },
+      "features": [
+        "pins",
+        "cavity",
+        "cable_hole",
+        "fillets"
+      ],
+      "feature_types": {
+        "pins": "ConvexFeature_Bolt",
+        "cavity": "ConcaveFeature_Hole",
+        "cable_hole": "ConcaveFeature_Hole",
+        "outer_surface": "FreeSurface"
+      },
+      "step_file": "step/connector_housing.step",
+      "stl_file": "stl/connector_housing.stl",
+      "model_id": 19,
+      "name": "connector_housing"
+    }
+  ]
+}

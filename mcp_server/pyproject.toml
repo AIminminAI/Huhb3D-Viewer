@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "huhb3d-mcp"
+version = "0.1.0"
+description = "3D Geometry Analysis MCP Server - AI-powered mesh quality inspector"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "trimesh>=4.0.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "sentence-transformers>=2.2.0",
+]
+
+[project.optional-dependencies]
+faiss = ["faiss-cpu>=1.7.0"]
+
+[project.scripts]
+huhb3d-mcp = "mcp_server.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["mcp_server"]

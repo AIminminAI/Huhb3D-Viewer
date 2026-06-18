@@ -1,0 +1,33 @@
+name: Deploy to Replicate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'replicate/**'
+      - '.github/workflows/deploy-replicate.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Cog
+        run: pip install cog
+
+      - name: Login to Replicate
+        run: cog login --token ${{ secrets.REPLICATE_API_TOKEN }}
+
+      - name: Push model to Replicate
+        working-directory: ./replicate
+        run: cog push r8.im/${{ secrets.REPLICATE_USERNAME }}/huhb3d-step-topology
+
+      - name: Print model URL
+        run: echo "Model deployed at https://replicate.com/${{ secrets.REPLICATE_USERNAME }}/huhb3d-step-topology"

@@ -1,17 +1,6 @@
 {
-  "items": [
-    {
-      "tag": "trending",
-      "tagLabel": "📈 开源",
-      "title": "[开源] ConstructAI-oss",
-      "desc": "⭐ 1 stars | AI-powered, multi-agent construction management platform. 11 coordinated agents, local-first LLM gateway (vLLM + Ollama), construction-specialized RAG",
-      "link": "https://github.com/A-SHOJAEI/ConstructAI-oss",
-      "linkText": "🔗 GitHub →",
-      "date": "2026-05-18",
-      "type": "repo"
-    }
-  ],
-  "lastUpdate": "2026-06-17 07:23:16",
+  "items": [],
+  "lastUpdate": "2026-06-19 07:21:52",
   "totalPapers": 0,
-  "totalRepos": 1
+  "totalRepos": 0
 }

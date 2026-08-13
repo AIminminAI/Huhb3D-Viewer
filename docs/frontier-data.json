@@ -1,6 +1,17 @@
 {
-  "items": [],
-  "lastUpdate": "2026-08-12 04:14:39",
+  "items": [
+    {
+      "tag": "trending",
+      "tagLabel": "📈 开源",
+      "title": "[开源] .github",
+      "desc": "⭐ 2 stars | Công ty phát triển phần mềm & AI tại Việt Nam. IT Services, Software Platform Engineering, AI Platform Engineering. Triển khai dự án thật: AI Agent, L",
+      "link": "https://github.com/CODE4LIFEOFFICIAL/.github",
+      "linkText": "🔗 GitHub →",
+      "date": "2026-08-08",
+      "type": "repo"
+    }
+  ],
+  "lastUpdate": "2026-08-13 04:19:28",
   "totalPapers": 0,
-  "totalRepos": 0
+  "totalRepos": 1
 }

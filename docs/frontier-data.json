@@ -3,6 +3,16 @@
     {
       "tag": "trending",
       "tagLabel": "📈 开源",
+      "title": "[开源] complete-artificial-intelligence-mega-course-2026",
+      "desc": "⭐ 3 stars | AI Foundations → Python → Data → Math & Statistics → Machine Learning → Advanced ML → Deep Learning → NLP → Computer Vision → Transformers & LLMs → Pr",
+      "link": "https://github.com/vivianaranha/complete-artificial-intelligence-mega-course-2026",
+      "linkText": "🔗 GitHub →",
+      "date": "2026-09-10",
+      "type": "repo"
+    },
+    {
+      "tag": "trending",
+      "tagLabel": "📈 开源",
       "title": "[开源] WaelHammali",
       "desc": "⭐ 2 stars | GitHub profile README — AI x Cybersecurity engineer at ENIT, LLM-agent pentesting, RAG and computer vision research.",
       "link": "https://github.com/WaelHammali/WaelHammali",
@@ -11,7 +21,7 @@
       "type": "repo"
     }
   ],
-  "lastUpdate": "2026-09-20 07:42:04",
+  "lastUpdate": "2026-09-21 07:54:19",
   "totalPapers": 0,
-  "totalRepos": 1
+  "totalRepos": 2
 }

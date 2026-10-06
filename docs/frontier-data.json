@@ -9,19 +9,9 @@
       "linkText": "🔗 GitHub →",
       "date": "2026-09-10",
       "type": "repo"
-    },
-    {
-      "tag": "trending",
-      "tagLabel": "📈 开源",
-      "title": "[开源] WaelHammali",
-      "desc": "⭐ 2 stars | GitHub profile README — AI x Cybersecurity engineer at ENIT, LLM-agent pentesting, RAG and computer vision research.",
-      "link": "https://github.com/WaelHammali/WaelHammali",
-      "linkText": "🔗 GitHub →",
-      "date": "2026-09-05",
-      "type": "repo"
     }
   ],
-  "lastUpdate": "2026-10-05 08:50:54",
+  "lastUpdate": "2026-10-06 08:52:55",
   "totalPapers": 0,
-  "totalRepos": 2
+  "totalRepos": 1
 }

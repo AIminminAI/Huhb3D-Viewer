@@ -1,17 +1,6 @@
 {
-  "items": [
-    {
-      "tag": "trending",
-      "tagLabel": "📈 开源",
-      "title": "[开源] complete-artificial-intelligence-mega-course-2026",
-      "desc": "⭐ 3 stars | AI Foundations → Python → Data → Math & Statistics → Machine Learning → Advanced ML → Deep Learning → NLP → Computer Vision → Transformers & LLMs → Pr",
-      "link": "https://github.com/vivianaranha/complete-artificial-intelligence-mega-course-2026",
-      "linkText": "🔗 GitHub →",
-      "date": "2026-09-10",
-      "type": "repo"
-    }
-  ],
-  "lastUpdate": "2026-10-10 08:23:26",
+  "items": [],
+  "lastUpdate": "2026-10-11 08:39:48",
   "totalPapers": 0,
-  "totalRepos": 1
+  "totalRepos": 0
 }
